@@ -758,7 +758,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         fig_spy = plt.figure(figsize=(10, 5))
                         plt.plot(
                             spy_df['Date'],
-                            spy_df['*100 % Return'],  # Convert to percentage
+                            spy_df['*100 % Return'] * 100,  # Convert to percentage
                             label='SPY Returns (%)',
                             color='green'
                         )
