@@ -876,13 +876,13 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             )
 
                             # Drop NaN values in merged returns
-                            merged_df = merged_df.dropna(subset=["% Return_Portfolio", "% Return_SPY"])
+                            merged_df = merged_df.dropna(subset=["*100 % Return_Portfolio", "*100 % Return_SPY"])
                             st.subheader("Portfolio vs. SPY Returns:")
                             st.write(merged_df)
 
                             # Extract valid returns
-                            portfolio_returns = merged_df["% Return_Portfolio"].values
-                            spy_returns = merged_df["% Return_SPY"].values
+                            portfolio_returns = merged_df["*100 % Return_Portfolio"].values
+                            spy_returns = merged_df["*100 % Return_SPY"].values
 
                             # Ensure there are enough data points for regression
                             if len(portfolio_returns) > 1 and len(spy_returns) > 1:
