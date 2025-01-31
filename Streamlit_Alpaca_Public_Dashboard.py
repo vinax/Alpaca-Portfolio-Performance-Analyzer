@@ -724,7 +724,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         fig_returns = plt.figure(figsize=(10, 5))
                         plt.plot(
                             filtered_df['Date'],
-                            filtered_df['*100 % Return'], # Convert to percentage
+                            filtered_df['*100 % Return'] * 100, # Convert to percentage
                             label='Portfolio Returns (%)',
                             color='blue'
                         )
@@ -736,7 +736,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         #plt.figure(figsize=(10, 5))
                         #plt.plot(
                         #    filtered_df['Date'],
-                        #    filtered_df['*100 Cumulative % Return'], # Convert to percentage
+                        #    filtered_df['*100 Cumulative % Return'] * 100, # Convert to percentage
                         #    label='Portfolio Cumulative Return (%)',
                         #    color='blue'
                         #)
