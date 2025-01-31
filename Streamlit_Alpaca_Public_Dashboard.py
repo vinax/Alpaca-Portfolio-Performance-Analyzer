@@ -516,7 +516,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
 ################## DISPLAY PORTFOLIO CUMULATIVE GROWTH CHARTS ##################
 
-if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date and aggregate_merged_data(merged_df) is not None:
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date and merged_df is not None:
 
     st.header("Portfolio Analytics")
 
@@ -765,7 +765,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
 if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
-    if aggregate_merged_data(merged_df) is not None:
+    if merged_df is not None:
 
         def calculate_metrics(filtered_df, spy_df=None):
             try:
@@ -1019,7 +1019,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
 ################## SAVE ALL DASHBOARD ACCOUNT DATA ##################
 
-if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date and aggregate_merged_data(merged_df) is not None:
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date and merged_df is not None:
 
     st.header("Download Options")
 
@@ -1159,7 +1159,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
 if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
-    if aggregate_merged_data(merged_df) is not None:
+    if merged_df is not None:
 
         def save_all_to_excel(sheets_data, file_name="portfolio_dashboard.xlsx"):
             try:
