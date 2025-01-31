@@ -516,7 +516,10 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
 ################## DISPLAY PORTFOLIO CUMULATIVE GROWTH CHARTS ##################
 
-if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date and process_portfolio_history(raw_data) is not None:
+portfolio_history_check = process_portfolio_history(raw_data)
+st.write(portfolio_history_check)
+
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date and portfolio_history_check is not None:
 
     st.header("Portfolio Analytics")
 
