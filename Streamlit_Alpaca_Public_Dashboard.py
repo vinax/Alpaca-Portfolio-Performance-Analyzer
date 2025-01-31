@@ -670,14 +670,18 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                     else:
                         st.error("Either portfolio_df or activities_df is not available.")
                         merged_df = None
-                    if process_portfolio_history(raw_data) is not None: # Aggregate merged data
+                    if merged_df is not None:  
                         aggregate_df = aggregate_merged_data(merged_df)
-                        if aggregate_df is not None: # Create the filtered table
+
+                        if aggregate_df is not None:
                             growth_calculation_table = filtered_table(aggregate_df, initial_date=earliest_date, after_date=starting_date, until_date=ending_date)
+                            
+                            if growth_calculation_table is None or growth_calculation_table.empty:
+                                st.error("Error: Growth Calculation Table is empty or could not be created.")
                         else:
-                            st.error("Error: Aggregate DataFrame is not available.")
+                            st.error("Error: Aggregated Data is None.")
                     else:
-                        st.error("Error: Merged DataFrame is not available.")
+                        st.error("Error: Merged DataFrame is None.")
                 except Exception as e:
                     st.error(f"Error in Growth Calculations: {e}")
 
@@ -760,16 +764,16 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         return {}
 
                 try:  # Display Charts
-                    if growth_calculation_table is not None and not spy_prices.empty:  # Ensure both portfolio and SPY data are available
-                        portfolio_returns_chart = plot_charts(growth_calculation_table) # Generate charts once
+                    if growth_calculation_table is not None and not growth_calculation_table.empty:
+                        portfolio_returns_chart = plot_charts(growth_calculation_table)
                         combined_charts = plot_combined_cumulative_chart(growth_calculation_table, spy_prices)
-                        if portfolio_returns_chart and portfolio_returns_chart.get("Portfolio Returns Chart"): # Display Portfolio Returns Chart
+                        if portfolio_returns_chart and "Portfolio Returns Chart" in portfolio_returns_chart:
                             st.subheader("Portfolio Returns Chart")
                             st.pyplot(portfolio_returns_chart["Portfolio Returns Chart"])
-                        if combined_charts and combined_charts.get("SPY Returns Chart"): # Display SPY Returns Chart
+                        if combined_charts and "SPY Returns Chart" in combined_charts:
                             st.subheader("SPY Returns Chart")
                             st.pyplot(combined_charts["SPY Returns Chart"])
-                        if combined_charts and combined_charts.get("Cumulative Growth Chart"): # Display Cumulative Growth Chart
+                        if combined_charts and "Cumulative Growth Chart" in combined_charts:
                             st.subheader("Cumulative Growth Chart")
                             st.pyplot(combined_charts["Cumulative Growth Chart"])
                     else:
