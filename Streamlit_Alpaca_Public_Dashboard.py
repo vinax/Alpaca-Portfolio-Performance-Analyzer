@@ -33,25 +33,27 @@ import zipfile
 ################## MAIN ##################
 
 st.title("Alpaca Trading Dashboard") # Streamlit App Title
-st.write("""
-### About  
-This is a basic web app/software tool designed to provide Alpaca users with a user-friendly way to obtain detailed analytic insights into their account portfolio history.
+st.write("### About")
+st.write("This is a basic web app/software tool designed to provide Alpaca users with a user-friendly way to obtain detailed analytic insights into their account portfolio history.")
 
-### Disclaimer  
-This software tool is for **educational and informational purposes only**. It is provided **as-is** and is **not intended for commercial use without explicit permission**.  
-- This is **not** financial advice or a trading recommendation.  
-- The author assumes **no liability for financial losses, incorrect data, or misinterpretations** arising from the use of this tool.  
-- Users are responsible for verifying all information before making financial decisions.  
+with st.expander("ℹ️ **Read Disclaimer & Security Notice**"):
+    st.write("""
+    ### Disclaimer  
+    This software tool is for **educational and informational purposes only**. It is provided **as-is** and is **not intended for commercial use without explicit permission**.  
+    - This is **not** financial advice or a trading recommendation.  
+    - The author assumes **no liability for financial losses, incorrect data, or misinterpretations** arising from the use of this tool.  
+    - Users are responsible for verifying all information before making financial decisions.  
 
-### Security & Privacy Notice  
-- **Your Alpaca API Key and Secret are never stored, logged, or transmitted to any third party.**  
-- All account data is **processed locally** and only retrieved for the active session.  
-- **No confidential information is collected, stored, or shared.**  
-- **Ensure your API Key and Secret remain secure** and are not exposed or auto-saved in your browser.  
-- The author is **not responsible** for unauthorized access due to poor security practices.  
+    ### Security & Privacy Notice  
+    - **Your Alpaca API Key and Secret are never stored, logged, or transmitted to any third party.**  
+    - All account data is **processed locally** and only retrieved for the active session.  
+    - **No confidential information is collected, stored, or shared.**  
+    - **Ensure your API Key and Secret remain secure** and are not exposed or auto-saved in your browser.  
+    - The author is **not responsible** for unauthorized access due to poor security practices.  
+    """)
 
-#### Click the **top left arrow** to proceed. Please wait while your account information is being processed.
-""")
+st.write("#### Click the **top left arrow** to proceed. Please wait while your account information is being processed.")
+
 st.sidebar.header("Account Settings") # User Inputs via Streamlit Sidebar
 account = st.sidebar.radio('Select Account', ['Paper', 'Live'])
 key = st.sidebar.text_input('Enter Alpaca API Key', type="password")
@@ -289,6 +291,13 @@ def aggregate_merged_data(merged_df):  # Aggregate merged data
     try:
         # Step 1: Ensure 'date' column and numeric formatting
         merged_df['date'] = pd.to_datetime(merged_df['timestamp']).dt.date  # Convert 'timestamp' to date
+
+        # Ensure required numeric columns exist before performing operations
+        required_columns = ['net_amount', 'price', 'qty']
+        for col in required_columns:
+            if col not in merged_df.columns:
+                merged_df[col] = 0  # Fill missing columns with zeros to avoid errors
+
         merged_df['net_amount'] = pd.to_numeric(merged_df['net_amount'], errors='coerce').fillna(0)  # Ensure 'net_amount' is numeric
         merged_df['price'] = pd.to_numeric(merged_df['price'], errors='coerce').fillna(0)  # Ensure 'price' is numeric
         merged_df['qty'] = pd.to_numeric(merged_df['qty'], errors='coerce').fillna(0)  # Ensure 'qty' is numeric
