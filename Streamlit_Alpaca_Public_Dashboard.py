@@ -521,7 +521,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
     # Ensure portfolio_df and activities_df are valid before merging
     earliest_date, latest_date = get_earliest_latest_date(api) # Fetch earliest time
     portfolio_history = get_portfolio_history(api, after_date=earliest_date, until_date=latest_date)
-    portfolio_df = process_portfolio_history(portfolio_history["data"]) if portfolio_history and "data" in portfolio_history else None
+    portfolio_df = process_portfolio_history(portfolio_history.get("data", pd.DataFrame()))
 
     activities_raw = get_activities(api, after_date=starting_date, until_date=ending_date)
     activities_df = process_activities_dataframe(activities_raw) if not activities_raw.empty else None
@@ -784,7 +784,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
     # Ensure portfolio_df and activities_df are valid before merging
     earliest_date, latest_date = get_earliest_latest_date(api) # Fetch earliest time
     portfolio_history = get_portfolio_history(api, after_date=earliest_date, until_date=latest_date)
-    portfolio_df = process_portfolio_history(portfolio_history["data"]) if portfolio_history and "data" in portfolio_history else None
+    portfolio_df = process_portfolio_history(portfolio_history.get("data", pd.DataFrame()))
 
     activities_raw = get_activities(api, after_date=starting_date, until_date=ending_date)
     activities_df = process_activities_dataframe(activities_raw) if not activities_raw.empty else None
@@ -1054,7 +1054,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
     # Ensure portfolio_df and activities_df are valid before merging
     earliest_date, latest_date = get_earliest_latest_date(api) # Fetch earliest time
     portfolio_history = get_portfolio_history(api, after_date=earliest_date, until_date=latest_date)
-    portfolio_df = process_portfolio_history(portfolio_history["data"]) if portfolio_history and "data" in portfolio_history else None
+    portfolio_df = process_portfolio_history(portfolio_history.get("data", pd.DataFrame()))
 
     activities_raw = get_activities(api, after_date=starting_date, until_date=ending_date)
     activities_df = process_activities_dataframe(activities_raw) if not activities_raw.empty else None
