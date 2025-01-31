@@ -999,7 +999,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
                 try:
                     plot_drawdown_chart(growth_calculation_table['*100 % Return'].dropna()) # Plot drawdown chart
-                    drawdown_chart = plot_drawdown_chart(growth_calculation_table['% Return'].dropna())
+                    drawdown_chart = plot_drawdown_chart(growth_calculation_table['*100 % Return'].dropna())
                     if drawdown_chart:
                         st.subheader("Drawdown Chart")
                         st.pyplot(drawdown_chart)
