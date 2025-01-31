@@ -1019,7 +1019,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
 ################## SAVE ALL DASHBOARD ACCOUNT DATA ##################
 
-if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date and aggregate_merged_data(merged_df) is not None::
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date and aggregate_merged_data(merged_df) is not None:
 
     st.header("Download Options")
 
