@@ -515,7 +515,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
     def calculate_spy_returns(spy_df): # Calculate % Returns for SPY
         try:
-            spy_df["% Return"] = spy_df["Close"].pct_change() * 100  # Calculate daily returns as a percentage
+            spy_df["*100 % Return"] = spy_df["Close"].pct_change()  # Calculate daily returns as a percentage
             return spy_df
         except Exception as e:
             st.error(f"Error calculating SPY returns: {e}")
@@ -669,10 +669,9 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             filtered_df.loc[i, 'Adjusted % Return'] = (
                                 (filtered_df.loc[i, 'Cumulative Value Return'] / filtered_df.loc[i - 1, 'Cumulative Value Return']) - 1
                             )
-                        filtered_df['% Return'] = filtered_df['Adjusted % Return'] # Replace original columns with adjusted values
-                        filtered_df['Cumulative % Return'] = filtered_df['Adjusted Cumulative % Return']
-                        filtered_df.drop(columns=['Adjusted Cumulative % Return'], inplace=True) # Hide unimportant columns
-                        filtered_df.drop(columns=['Adjusted % Return'], inplace=True)
+                        filtered_df['*100 % Return'] = filtered_df['Adjusted % Return'] # Replace original columns with adjusted values
+                        filtered_df['*100 Cumulative % Return'] = filtered_df['Adjusted Cumulative % Return']
+                        filtered_df.drop(columns=['Adjusted Cumulative % Return', 'Adjusted % Return', 'Cumulative % Return', '% Return'], inplace=True) # Hide unimportant columns
                         #filtered_df.drop(columns=['Cumulative Value Return'], inplace=True)
                         filtered_df['Date'] = filtered_df['Date'].dt.date  # Format to display only the date
                         after_date = after_date.date() # Ensure after_date is also a datetime.date
@@ -725,7 +724,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         fig_returns = plt.figure(figsize=(10, 5))
                         plt.plot(
                             filtered_df['Date'],
-                            filtered_df['% Return'] * 100, # Convert to percentage
+                            filtered_df['*100 % Return'] * 100, # Convert to percentage
                             label='Portfolio Returns (%)',
                             color='blue'
                         )
@@ -737,7 +736,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         #plt.figure(figsize=(10, 5))
                         #plt.plot(
                         #    filtered_df['Date'],
-                        #    filtered_df['Cumulative % Return'] * 100, # Convert to percentage
+                        #    filtered_df['*100 Cumulative % Return'] * 100, # Convert to percentage
                         #    label='Portfolio Cumulative Return (%)',
                         #    color='blue'
                         #)
@@ -759,7 +758,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         fig_spy = plt.figure(figsize=(10, 5))
                         plt.plot(
                             spy_df['Date'],
-                            spy_df['% Return'],  # Convert to percentage
+                            spy_df['*100 % Return'],  # Convert to percentage
                             label='SPY Returns (%)',
                             color='green'
                         )
@@ -775,7 +774,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         fig_cumulative = plt.figure(figsize=(10, 5))
                         plt.plot(
                             portfolio_df["Date"],
-                            portfolio_df["Cumulative % Return"] * 100,  # Convert to percentage
+                            portfolio_df["*100 Cumulative % Return"] * 100,  # Convert to percentage
                             label="Portfolio Cumulative Return (%)",
                             color="blue",
                         )
@@ -837,7 +836,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
                 def calculate_metrics(filtered_df, spy_df=None):
                     try:
-                        returns = filtered_df['% Return'].dropna() # Daily returns
+                        returns = filtered_df['*100 % Return'].dropna() # Daily returns
                         cumulative_values = filtered_df['Cumulative Value Return']  # Use cumulative value return
                         years = len(filtered_df) / 252 # Assuming 252 trading days/year
                         trades = len(returns) # Total trades
@@ -870,8 +869,8 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         if spy_df is not None and not spy_df.empty:
                             # Align portfolio and SPY returns by date
                             merged_df = pd.merge(
-                                filtered_df[["Date", "% Return"]],
-                                spy_df[["Date", "% Return"]],
+                                filtered_df[["Date", "*100 % Return"]],
+                                spy_df[["Date", "*100 % Return"]],
                                 on="Date",
                                 suffixes=("_Portfolio", "_SPY"),
                             )
