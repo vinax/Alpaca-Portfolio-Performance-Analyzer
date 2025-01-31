@@ -6,3 +6,5 @@
 6. Streamlit dashboard should open on your browser
 7. Enter your Alpaca API key and secret then hit refresh
 8. Your Alpaca account stats should update and be visible on the Streamlit dashboard
+
+Alternatively, you can use the tool online here: https://alpaca-portfolio-performance-analyzer.streamlit.app/
