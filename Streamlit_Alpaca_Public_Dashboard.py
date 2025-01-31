@@ -516,7 +516,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
 ################## DISPLAY PORTFOLIO CUMULATIVE GROWTH CHARTS ##################
 
-if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date and aggregate_merged_data(merged_df) is not None:
 
     st.header("Portfolio Analytics")
 
@@ -765,256 +765,261 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
 if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
-    def calculate_metrics(filtered_df, spy_df=None):
-        try:
-            returns = filtered_df['% Return'].dropna() # Daily returns
-            cumulative_values = filtered_df['Cumulative Value Return']  # Use cumulative value return
-            years = len(filtered_df) / 252 # Assuming 252 trading days/year
-            trades = len(returns) # Total trades
+    if aggregate_merged_data(merged_df) is not None:
 
-            rolling_max = cumulative_values.cummax() # Calculate drawdown metrics
-            drawdown = (cumulative_values - rolling_max) / rolling_max
-            max_drawdown = drawdown.min()
-            end_date = drawdown.idxmin()
-            start_date = cumulative_values.loc[:end_date].idxmax()
-            recovery_time = (drawdown.loc[end_date:] == 0).idxmax() - end_date
+        def calculate_metrics(filtered_df, spy_df=None):
+            try:
+                returns = filtered_df['% Return'].dropna() # Daily returns
+                cumulative_values = filtered_df['Cumulative Value Return']  # Use cumulative value return
+                years = len(filtered_df) / 252 # Assuming 252 trading days/year
+                trades = len(returns) # Total trades
 
-            cagr = ((1 + returns).prod() ** (1 / years)) - 1 # CAGR
-            volatility = returns.std() * np.sqrt(252) # Volatility
-            sharpe_ratio = returns.mean() / returns.std() * np.sqrt(252) # Sharpe Ratio
-            downside_deviation = np.sqrt(np.mean(np.minimum(returns, 0) ** 2))
-            sortino_ratio = (returns.mean() * 252) / downside_deviation # Sortino Ratio
-            win_rate = (returns > 0).mean() # Win Rate
-            profit_factor = returns[returns > 0].sum() / abs(returns[returns < 0].sum()) # Profit Factor
+                rolling_max = cumulative_values.cummax() # Calculate drawdown metrics
+                drawdown = (cumulative_values - rolling_max) / rolling_max
+                max_drawdown = drawdown.min()
+                end_date = drawdown.idxmin()
+                start_date = cumulative_values.loc[:end_date].idxmax()
+                recovery_time = (drawdown.loc[end_date:] == 0).idxmax() - end_date
 
-            winning_trades = returns[returns > 0]
-            losing_trades = returns[returns < 0]
-            p_win = len(winning_trades) / len(returns) if len(returns) > 0 else 0
-            p_loss = 1 - p_win
-            avg_win = winning_trades.mean() if len(winning_trades) > 0 else 0
-            avg_loss = abs(losing_trades.mean()) if len(losing_trades) > 0 else 0
-            expectancy = (p_win * avg_win) - (p_loss * avg_loss) # Expectancy
+                cagr = ((1 + returns).prod() ** (1 / years)) - 1 # CAGR
+                volatility = returns.std() * np.sqrt(252) # Volatility
+                sharpe_ratio = returns.mean() / returns.std() * np.sqrt(252) # Sharpe Ratio
+                downside_deviation = np.sqrt(np.mean(np.minimum(returns, 0) ** 2))
+                sortino_ratio = (returns.mean() * 252) / downside_deviation # Sortino Ratio
+                win_rate = (returns > 0).mean() # Win Rate
+                profit_factor = returns[returns > 0].sum() / abs(returns[returns < 0].sum()) # Profit Factor
 
-            # Alpha, Beta, R-squared, T-statistic, and P-value (if SPY data is available)
-            alpha, beta, r_squared, t_stat, p_value = (None, None, None, None, None)
-            if spy_df is not None and not spy_df.empty:
-                # Align portfolio and SPY returns by date
-                merged_df = pd.merge(
-                    filtered_df[["Date", "% Return"]],
-                    spy_df[["Date", "% Return"]],
-                    on="Date",
-                    suffixes=("_Portfolio", "_SPY"),
+                winning_trades = returns[returns > 0]
+                losing_trades = returns[returns < 0]
+                p_win = len(winning_trades) / len(returns) if len(returns) > 0 else 0
+                p_loss = 1 - p_win
+                avg_win = winning_trades.mean() if len(winning_trades) > 0 else 0
+                avg_loss = abs(losing_trades.mean()) if len(losing_trades) > 0 else 0
+                expectancy = (p_win * avg_win) - (p_loss * avg_loss) # Expectancy
+
+                # Alpha, Beta, R-squared, T-statistic, and P-value (if SPY data is available)
+                alpha, beta, r_squared, t_stat, p_value = (None, None, None, None, None)
+                if spy_df is not None and not spy_df.empty:
+                    # Align portfolio and SPY returns by date
+                    merged_df = pd.merge(
+                        filtered_df[["Date", "% Return"]],
+                        spy_df[["Date", "% Return"]],
+                        on="Date",
+                        suffixes=("_Portfolio", "_SPY"),
+                    )
+
+                    # Drop NaN values in merged returns
+                    merged_df = merged_df.dropna(subset=["% Return_Portfolio", "% Return_SPY"])
+                    st.subheader("Portfolio vs. SPY Returns:")
+                    st.write(merged_df)
+
+                    # Extract valid returns
+                    portfolio_returns = merged_df["% Return_Portfolio"].values
+                    spy_returns = merged_df["% Return_SPY"].values
+
+                    # Ensure there are enough data points for regression
+                    if len(portfolio_returns) > 1 and len(spy_returns) > 1:
+                        # Regression for Alpha, Beta, and R-squared
+                        beta, alpha, r_value, p_value, std_err = linregress(spy_returns, portfolio_returns)
+                        r_squared = r_value ** 2
+                        t_stat = alpha / std_err
+
+                        # Means, Variances, and Correlation
+                        portfolio_mean = portfolio_returns.mean()
+                        spy_mean = spy_returns.mean()
+                        portfolio_variance = portfolio_returns.var()
+                        spy_variance = spy_returns.var()
+                        correlation = np.corrcoef(portfolio_returns, spy_returns)[0, 1]
+
+                skewness_val = skew(returns) # Skewness and Kurtosis
+                kurtosis_val = kurtosis(returns)
+                trade_frequency = trades / years # Trade Frequency and SQN
+                sqn = (returns.mean() / returns.std()) * np.sqrt(trades)
+
+                # Define ideal metric thresholds
+                ideal_thresholds = {
+                    "CAGR": "> 0.1",  # Compound Annual Growth Rate
+                    "Volatility": "< 0.15",  # Annualized volatility
+                    "Sharpe Ratio": "> 1.0",  # Risk-adjusted return
+                    "Sortino Ratio": "> 1.0",  # Downside risk-adjusted return
+                    "Calmar Ratio": "> 0.5",  # Risk-adjusted return vs. drawdown
+                    "Ulcer Index": "< 5",  # Measure of drawdown severity
+                    "Max Drawdown": "> -0.2",  # Maximum portfolio loss
+                    "Average Drawdown": "> -0.1",  # Average portfolio loss
+                    "Recovery Time": "< 180",  # Time to recover from drawdown
+                    "Win Rate": "> 0.5",  # Percentage of profitable trades
+                    "Profit Factor": "> 1.5",  # Ratio of gross profits to gross losses
+                    "Expectancy": "> 0",  # Average return per trade
+                    "R-squared": "> 0.5",  # Variance explained by benchmark
+                    "Alpha": "> 0",  # Excess return over benchmark
+                    "Beta": "< 1",  # Sensitivity to benchmark
+                    "T-statistic of Returns": "> 2.0",  # Statistical significance of Alpha
+                    "P-value": "< 0.05",  # Confidence in Alpha's significance
+                    "Correlation": "> -0.3 and < 0.3",  # Portfolio vs. benchmark
+                    "Portfolio Mean": "> SPY Mean",  # Portfolio’s average daily return
+                    "SPY Mean": "Reference value",  # Benchmark average daily return
+                    "Portfolio Variance": "< 0.01",  # Low return variance is preferred
+                    "SPY Variance": "Reference value",  # Benchmark return variance
+                    "Skewness": "> 0",  # Positive skewness preferred
+                    "Kurtosis": "> 3",  # Higher kurtosis indicates heavy tails
+                    "SQN": "> 2.5",  # System Quality Number for strategy robustness
+                }
+
+                return {
+                    "metrics": {
+                        "CAGR": cagr if cagr is not None else None,  # Return numeric value or None
+                        "Volatility": volatility if volatility is not None else None,
+                        "Sharpe Ratio": sharpe_ratio if sharpe_ratio is not None else None,
+                        "Sortino Ratio": sortino_ratio if sortino_ratio is not None else None,
+                        "Calmar Ratio": (cagr / abs(max_drawdown)) if max_drawdown < 0 else None,
+                        "Ulcer Index": np.sqrt(np.mean(drawdown ** 2)) if drawdown is not None else None,
+                        "Max Drawdown": max_drawdown if max_drawdown is not None else None,
+                        "Average Drawdown": drawdown[drawdown < 0].mean() if len(drawdown[drawdown < 0]) > 0 else None,
+                        "Recovery Time": recovery_time if recovery_time is not None else None,
+                        "Win Rate": win_rate if win_rate is not None else None,
+                        "Profit Factor": profit_factor if profit_factor is not None else None,
+                        "Expectancy": expectancy if expectancy is not None else None,
+                        "R-squared": r_squared if r_squared is not None else None,
+                        "Alpha": alpha if alpha is not None else None,
+                        "Beta": beta if beta is not None else None,
+                        "T-statistic of Returns": t_stat if t_stat is not None else None,
+                        "P-value": p_value if p_value is not None else None,
+                        "Portfolio Mean": portfolio_mean if portfolio_mean is not None else None,
+                        "SPY Mean": spy_mean if spy_mean is not None else None,
+                        "Portfolio Variance": portfolio_variance if portfolio_variance is not None else None,
+                        "SPY Variance": spy_variance if spy_variance is not None else None,
+                        "Correlation": correlation if correlation is not None else None,
+                        "Skewness": skewness_val if skewness_val is not None else None,
+                        "Kurtosis": kurtosis_val if kurtosis_val is not None else None,
+                        "SQN": sqn if sqn is not None else None,
+                    },
+                    "ideal_thresholds": ideal_thresholds,
+                }
+
+            except Exception as e:
+                st.error(f"Error calculating metrics: {e}")
+                return {}
+
+        def plot_drawdown_chart(returns):
+            try:
+                cumulative_val_return = (1 + returns).cumprod() # Calculate cumulative returns and drawdown
+                rolling_max = cumulative_val_return.cummax()
+                drawdown = ((cumulative_val_return - rolling_max) / rolling_max) * 100   
+                fig, ax = plt.subplots(figsize=(10, 5)) # Create the figure and axes
+                ax.plot( # Plot cumulative returns
+                    returns.index,
+                    (cumulative_val_return - 1) * 100,  # Convert cumulative return to percentage
+                    label="Cumulative Returns (%)",
+                    color="blue",
                 )
+                ax.fill_between( # Highlight drawdown as a filled area
+                    returns.index,
+                    0,
+                    drawdown,
+                    color="red",
+                    alpha=0.3,
+                    label="Drawdown (%)"
+                )
+                ax.set_title("Portfolio Cumulative Return vs. Drawdown") # Add labels, title, and legend
+                ax.set_xlabel("Time")
+                ax.set_ylabel("Value (%)")
+                ax.legend()
+                #st.pyplot(fig) # Display the chart in Streamlit
+                return fig # Return the figure object for embedding
+            except Exception as e:
+                st.error(f"Error plotting drawdown chart: {e}")
+                return None
 
-                # Drop NaN values in merged returns
-                merged_df = merged_df.dropna(subset=["% Return_Portfolio", "% Return_SPY"])
-                st.subheader("Portfolio vs. SPY Returns:")
-                st.write(merged_df)
-
-                # Extract valid returns
-                portfolio_returns = merged_df["% Return_Portfolio"].values
-                spy_returns = merged_df["% Return_SPY"].values
-
-                # Ensure there are enough data points for regression
-                if len(portfolio_returns) > 1 and len(spy_returns) > 1:
-                    # Regression for Alpha, Beta, and R-squared
-                    beta, alpha, r_value, p_value, std_err = linregress(spy_returns, portfolio_returns)
-                    r_squared = r_value ** 2
-                    t_stat = alpha / std_err
-
-                    # Means, Variances, and Correlation
-                    portfolio_mean = portfolio_returns.mean()
-                    spy_mean = spy_returns.mean()
-                    portfolio_variance = portfolio_returns.var()
-                    spy_variance = spy_returns.var()
-                    correlation = np.corrcoef(portfolio_returns, spy_returns)[0, 1]
-
-            skewness_val = skew(returns) # Skewness and Kurtosis
-            kurtosis_val = kurtosis(returns)
-            trade_frequency = trades / years # Trade Frequency and SQN
-            sqn = (returns.mean() / returns.std()) * np.sqrt(trades)
-
-            # Define ideal metric thresholds
-            ideal_thresholds = {
-                "CAGR": "> 0.1",  # Compound Annual Growth Rate
-                "Volatility": "< 0.15",  # Annualized volatility
-                "Sharpe Ratio": "> 1.0",  # Risk-adjusted return
-                "Sortino Ratio": "> 1.0",  # Downside risk-adjusted return
-                "Calmar Ratio": "> 0.5",  # Risk-adjusted return vs. drawdown
-                "Ulcer Index": "< 5",  # Measure of drawdown severity
-                "Max Drawdown": "> -0.2",  # Maximum portfolio loss
-                "Average Drawdown": "> -0.1",  # Average portfolio loss
-                "Recovery Time": "< 180",  # Time to recover from drawdown
-                "Win Rate": "> 0.5",  # Percentage of profitable trades
-                "Profit Factor": "> 1.5",  # Ratio of gross profits to gross losses
-                "Expectancy": "> 0",  # Average return per trade
-                "R-squared": "> 0.5",  # Variance explained by benchmark
-                "Alpha": "> 0",  # Excess return over benchmark
-                "Beta": "< 1",  # Sensitivity to benchmark
-                "T-statistic of Returns": "> 2.0",  # Statistical significance of Alpha
-                "P-value": "< 0.05",  # Confidence in Alpha's significance
-                "Correlation": "> -0.3 and < 0.3",  # Portfolio vs. benchmark
-                "Portfolio Mean": "> SPY Mean",  # Portfolio’s average daily return
-                "SPY Mean": "Reference value",  # Benchmark average daily return
-                "Portfolio Variance": "< 0.01",  # Low return variance is preferred
-                "SPY Variance": "Reference value",  # Benchmark return variance
-                "Skewness": "> 0",  # Positive skewness preferred
-                "Kurtosis": "> 3",  # Higher kurtosis indicates heavy tails
-                "SQN": "> 2.5",  # System Quality Number for strategy robustness
-            }
-
-            return {
-                "metrics": {
-                    "CAGR": cagr if cagr is not None else None,  # Return numeric value or None
-                    "Volatility": volatility if volatility is not None else None,
-                    "Sharpe Ratio": sharpe_ratio if sharpe_ratio is not None else None,
-                    "Sortino Ratio": sortino_ratio if sortino_ratio is not None else None,
-                    "Calmar Ratio": (cagr / abs(max_drawdown)) if max_drawdown < 0 else None,
-                    "Ulcer Index": np.sqrt(np.mean(drawdown ** 2)) if drawdown is not None else None,
-                    "Max Drawdown": max_drawdown if max_drawdown is not None else None,
-                    "Average Drawdown": drawdown[drawdown < 0].mean() if len(drawdown[drawdown < 0]) > 0 else None,
-                    "Recovery Time": recovery_time if recovery_time is not None else None,
-                    "Win Rate": win_rate if win_rate is not None else None,
-                    "Profit Factor": profit_factor if profit_factor is not None else None,
-                    "Expectancy": expectancy if expectancy is not None else None,
-                    "R-squared": r_squared if r_squared is not None else None,
-                    "Alpha": alpha if alpha is not None else None,
-                    "Beta": beta if beta is not None else None,
-                    "T-statistic of Returns": t_stat if t_stat is not None else None,
-                    "P-value": p_value if p_value is not None else None,
-                    "Portfolio Mean": portfolio_mean if portfolio_mean is not None else None,
-                    "SPY Mean": spy_mean if spy_mean is not None else None,
-                    "Portfolio Variance": portfolio_variance if portfolio_variance is not None else None,
-                    "SPY Variance": spy_variance if spy_variance is not None else None,
-                    "Correlation": correlation if correlation is not None else None,
-                    "Skewness": skewness_val if skewness_val is not None else None,
-                    "Kurtosis": kurtosis_val if kurtosis_val is not None else None,
-                    "SQN": sqn if sqn is not None else None,
-                },
-                "ideal_thresholds": ideal_thresholds,
-            }
-
-        except Exception as e:
-            st.error(f"Error calculating metrics: {e}")
-            return {}
-
-    def plot_drawdown_chart(returns):
         try:
-            cumulative_val_return = (1 + returns).cumprod() # Calculate cumulative returns and drawdown
-            rolling_max = cumulative_val_return.cummax()
-            drawdown = ((cumulative_val_return - rolling_max) / rolling_max) * 100   
-            fig, ax = plt.subplots(figsize=(10, 5)) # Create the figure and axes
-            ax.plot( # Plot cumulative returns
-                returns.index,
-                (cumulative_val_return - 1) * 100,  # Convert cumulative return to percentage
-                label="Cumulative Returns (%)",
-                color="blue",
-            )
-            ax.fill_between( # Highlight drawdown as a filled area
-                returns.index,
-                0,
-                drawdown,
-                color="red",
-                alpha=0.3,
-                label="Drawdown (%)"
-            )
-            ax.set_title("Portfolio Cumulative Return vs. Drawdown") # Add labels, title, and legend
-            ax.set_xlabel("Time")
-            ax.set_ylabel("Value (%)")
-            ax.legend()
-            #st.pyplot(fig) # Display the chart in Streamlit
-            return fig # Return the figure object for embedding
-        except Exception as e:
-            st.error(f"Error plotting drawdown chart: {e}")
-            return None
+            plot_drawdown_chart(growth_calculation_table['% Return'].dropna()) # Plot drawdown chart
+            drawdown_chart = plot_drawdown_chart(growth_calculation_table['% Return'].dropna())
+            if drawdown_chart:
+                st.subheader("Drawdown Chart")
+                st.pyplot(drawdown_chart)
+            st.subheader("Growth Calculation Table:")
+            st.write(growth_calculation_table)
+            if growth_calculation_table is not None:
+                results = calculate_metrics(growth_calculation_table, spy_prices)
+                metrics = results["metrics"]
+                thresholds = results["ideal_thresholds"]
 
-    try:
-        plot_drawdown_chart(growth_calculation_table['% Return'].dropna()) # Plot drawdown chart
-        drawdown_chart = plot_drawdown_chart(growth_calculation_table['% Return'].dropna())
-        if drawdown_chart:
-            st.subheader("Drawdown Chart")
-            st.pyplot(drawdown_chart)
-        st.subheader("Growth Calculation Table:")
-        st.write(growth_calculation_table)
-        if growth_calculation_table is not None:
-            results = calculate_metrics(growth_calculation_table, spy_prices)
-            metrics = results["metrics"]
-            thresholds = results["ideal_thresholds"]
+                st.header("Performance Metrics")
 
-            st.header("Performance Metrics")
-
-            # Add a mini-header for the metrics table
-            st.markdown(
-                """
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 2px solid #000; font-weight: bold;">
-                    <div style="text-align: left; flex: 1;">METRIC</div>
-                    <div style="text-align: left; flex: 1;">STATUS</div>
-                    <div style="text-align: left; flex: 1;">RESULT</div>
-                    <div style="text-align: left; flex: 1;">THRESHOLD</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            for metric, value in metrics.items():
-                ideal = thresholds.get(metric, "N/A")  # Fetch ideal threshold or default to "N/A"
-
-                # Determine if the metric meets the threshold
-                meets_threshold = None  # None: No evaluation, True: Meets, False: Fails
-                if metric in thresholds:
-                    try:
-                        # Handle specific Portfolio Mean vs SPY Mean comparison
-                        if metric == "Portfolio Mean" and "SPY Mean" in metrics:
-                            value = metrics["Portfolio Mean"]  # Get Portfolio Mean
-                            spy_mean = metrics["SPY Mean"]  # Get SPY Mean
-                            meets_threshold = value > spy_mean
-                        # Evaluate numeric thresholds
-                        elif ">" in ideal and "<" in ideal and "and" in ideal:
-                            lower_bound = float(ideal.split(">")[1].split("and")[0].strip())
-                            upper_bound = float(ideal.split("<")[1].strip())
-                            meets_threshold = lower_bound < float(value) < upper_bound
-                        elif ">" in ideal:
-                            meets_threshold = float(value) > float(ideal.split(">")[1].replace("%", "").strip())
-                        elif "<" in ideal:
-                            meets_threshold = float(value) < float(ideal.split("<")[1].replace("%", "").strip())
-                        elif "Close to" in ideal:
-                            target = float(ideal.split("to")[1].replace("(", "").replace(")", "").strip())
-                            meets_threshold = abs(float(value) - target) < 0.1 * target
-                    except (ValueError, TypeError):
-                        meets_threshold = None  # Skip non-numeric thresholds
-
-                # Set the status and color
-                if meets_threshold is None:
-                    status = "-"
-                    color = "black"
-                elif meets_threshold:
-                    status = "PASS"
-                    color = "green"
-                else:
-                    status = "FAIL"
-                    color = "red"
-
-                # Format the value
-                formatted_value = f"{value:.4f}" if isinstance(value, float) else value
-
-                # Display the metric using st.markdown for color formatting
+                # Add a mini-header for the metrics table
                 st.markdown(
-                    f"""
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee;">
-                        <div style="font-weight: bold; text-align: left; flex: 1;">{metric}</div>
-                        <div style="color: {color}; font-weight: bold; text-align: left; flex: 1;">{status}</div>
-                        <div style="font-style: italic; text-align: left; flex: 1;">{formatted_value}</div>
-                        <div style="font-size: small; text-align: left; flex: 1;">{ideal}</div>
+                    """
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 2px solid #000; font-weight: bold;">
+                        <div style="text-align: left; flex: 1;">METRIC</div>
+                        <div style="text-align: left; flex: 1;">STATUS</div>
+                        <div style="text-align: left; flex: 1;">RESULT</div>
+                        <div style="text-align: left; flex: 1;">THRESHOLD</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
-    except Exception as e:
-        st.error(f"Error calculating metrics or plotting chart: {e}")
+
+                for metric, value in metrics.items():
+                    ideal = thresholds.get(metric, "N/A")  # Fetch ideal threshold or default to "N/A"
+
+                    # Determine if the metric meets the threshold
+                    meets_threshold = None  # None: No evaluation, True: Meets, False: Fails
+                    if metric in thresholds:
+                        try:
+                            # Handle specific Portfolio Mean vs SPY Mean comparison
+                            if metric == "Portfolio Mean" and "SPY Mean" in metrics:
+                                value = metrics["Portfolio Mean"]  # Get Portfolio Mean
+                                spy_mean = metrics["SPY Mean"]  # Get SPY Mean
+                                meets_threshold = value > spy_mean
+                            # Evaluate numeric thresholds
+                            elif ">" in ideal and "<" in ideal and "and" in ideal:
+                                lower_bound = float(ideal.split(">")[1].split("and")[0].strip())
+                                upper_bound = float(ideal.split("<")[1].strip())
+                                meets_threshold = lower_bound < float(value) < upper_bound
+                            elif ">" in ideal:
+                                meets_threshold = float(value) > float(ideal.split(">")[1].replace("%", "").strip())
+                            elif "<" in ideal:
+                                meets_threshold = float(value) < float(ideal.split("<")[1].replace("%", "").strip())
+                            elif "Close to" in ideal:
+                                target = float(ideal.split("to")[1].replace("(", "").replace(")", "").strip())
+                                meets_threshold = abs(float(value) - target) < 0.1 * target
+                        except (ValueError, TypeError):
+                            meets_threshold = None  # Skip non-numeric thresholds
+
+                    # Set the status and color
+                    if meets_threshold is None:
+                        status = "-"
+                        color = "black"
+                    elif meets_threshold:
+                        status = "PASS"
+                        color = "green"
+                    else:
+                        status = "FAIL"
+                        color = "red"
+
+                    # Format the value
+                    formatted_value = f"{value:.4f}" if isinstance(value, float) else value
+
+                    # Display the metric using st.markdown for color formatting
+                    st.markdown(
+                        f"""
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee;">
+                            <div style="font-weight: bold; text-align: left; flex: 1;">{metric}</div>
+                            <div style="color: {color}; font-weight: bold; text-align: left; flex: 1;">{status}</div>
+                            <div style="font-style: italic; text-align: left; flex: 1;">{formatted_value}</div>
+                            <div style="font-size: small; text-align: left; flex: 1;">{ideal}</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+        except Exception as e:
+            st.error(f"Error calculating metrics or plotting chart: {e}")
+
+    else:
+        st.write("No data to show.")
 
 ################## SAVE ALL DASHBOARD ACCOUNT DATA ##################
 
-if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date and aggregate_merged_data(merged_df) is not None::
 
     st.header("Download Options")
 
@@ -1154,76 +1159,81 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
 if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
-    def save_all_to_excel(sheets_data, file_name="portfolio_dashboard.xlsx"):
-        try:
-            output = BytesIO()
-            with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-                for sheet_name, df in sheets_data.items():
-                    df.to_excel(writer, index=False, sheet_name=sheet_name[:31])  # Sheet names must be <= 31 chars
-            output.seek(0)
-            return output
-        except Exception as e:
-            st.error(f"Error saving all data to Excel: {e}")
-            return None
+    if aggregate_merged_data(merged_df) is not None:
 
-    def save_charts_to_zip(charts, zip_file_name="charts.zip"):
-        try:
-            zip_buffer = BytesIO()  # Create an in-memory ZIP file
-            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file: # Open the ZIP file for writing
-                for chart_name, fig in charts.items():
-                    if isinstance(fig, plt.Figure):  # Ensure valid Matplotlib figure
-                        img_buffer = BytesIO() # Save the figure to an in-memory BytesIO buffer
-                        fig.savefig(img_buffer, format="png", dpi=150)
-                        img_buffer.seek(0)  # Rewind the buffer to the beginning
-                        zip_file.writestr(f"{chart_name}.png", img_buffer.read()) # Write the image to the ZIP file
-                    else:
-                        st.error(f"Invalid chart object for {chart_name}: {type(fig)}")
-            zip_buffer.seek(0)  # Rewind the ZIP buffer for reading
-            return zip_buffer
-        except Exception as e:
-            st.error(f"Error creating ZIP file: {e}")
-            return None
+        def save_all_to_excel(sheets_data, file_name="portfolio_dashboard.xlsx"):
+            try:
+                output = BytesIO()
+                with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                    for sheet_name, df in sheets_data.items():
+                        df.to_excel(writer, index=False, sheet_name=sheet_name[:31])  # Sheet names must be <= 31 chars
+                output.seek(0)
+                return output
+            except Exception as e:
+                st.error(f"Error saving all data to Excel: {e}")
+                return None
 
-    # Gather all data into a dictionary for export
-    sheets_data = {
-        "Portfolio Overview": create_portfolio_overview_df(portfolio_stats),
-        "Current Positions": positions,
-        "Trade History": formatted_trades if 'formatted_trades' in locals() else pd.DataFrame(),
-        "Portfolio History": processed_portfolio,
-        "Activities": processed_activities,
-        "Aggregated Account Data": aggregated_data,
-        "Growth Calculation Table": growth_calculation_table,
-        "SPY Returns": spy_prices,
-        "Performance Metrics": performance_metrics_df,
-    }
+        def save_charts_to_zip(charts, zip_file_name="charts.zip"):
+            try:
+                zip_buffer = BytesIO()  # Create an in-memory ZIP file
+                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file: # Open the ZIP file for writing
+                    for chart_name, fig in charts.items():
+                        if isinstance(fig, plt.Figure):  # Ensure valid Matplotlib figure
+                            img_buffer = BytesIO() # Save the figure to an in-memory BytesIO buffer
+                            fig.savefig(img_buffer, format="png", dpi=150)
+                            img_buffer.seek(0)  # Rewind the buffer to the beginning
+                            zip_file.writestr(f"{chart_name}.png", img_buffer.read()) # Write the image to the ZIP file
+                        else:
+                            st.error(f"Invalid chart object for {chart_name}: {type(fig)}")
+                zip_buffer.seek(0)  # Rewind the ZIP buffer for reading
+                return zip_buffer
+            except Exception as e:
+                st.error(f"Error creating ZIP file: {e}")
+                return None
 
-    # Combine all charts into one dictionary
-    charts = {
-        "Portfolio Returns Chart": portfolio_returns_chart.get("Portfolio Returns Chart"),
-        "SPY Returns Chart": combined_charts.get("SPY Returns Chart"),
-        "Cumulative Growth Chart": combined_charts.get("Cumulative Growth Chart"),
-        "Drawdown Chart": drawdown_chart,
-    }
+        # Gather all data into a dictionary for export
+        sheets_data = {
+            "Portfolio Overview": create_portfolio_overview_df(portfolio_stats),
+            "Current Positions": positions,
+            "Trade History": formatted_trades if 'formatted_trades' in locals() else pd.DataFrame(),
+            "Portfolio History": processed_portfolio,
+            "Activities": processed_activities,
+            "Aggregated Account Data": aggregated_data,
+            "Growth Calculation Table": growth_calculation_table,
+            "SPY Returns": spy_prices,
+            "Performance Metrics": performance_metrics_df,
+        }
 
-    # Button to download the compiled Excel file with charts embedded
-    if st.button("Download All Data"):
-        valid_charts = {k: v for k, v in charts.items() if isinstance(v, plt.Figure)}
-        excel_file = save_all_to_excel(sheets_data)
-        if excel_file:
-            st.download_button(
-                label="Save Report As Excel",
-                data=excel_file,
-                file_name="portfolio_dashboard.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-        zip_file = save_charts_to_zip(valid_charts)
-        if zip_file:
-            st.download_button(
-                label="Save Charts As Zip",
-                data=zip_file,
-                file_name="charts.zip",
-                mime="application/zip"
-            )
+        # Combine all charts into one dictionary
+        charts = {
+            "Portfolio Returns Chart": portfolio_returns_chart.get("Portfolio Returns Chart"),
+            "SPY Returns Chart": combined_charts.get("SPY Returns Chart"),
+            "Cumulative Growth Chart": combined_charts.get("Cumulative Growth Chart"),
+            "Drawdown Chart": drawdown_chart,
+        }
+
+        # Button to download the compiled Excel file with charts embedded
+        if st.button("Download All Data"):
+            valid_charts = {k: v for k, v in charts.items() if isinstance(v, plt.Figure)}
+            excel_file = save_all_to_excel(sheets_data)
+            if excel_file:
+                st.download_button(
+                    label="Save Report As Excel",
+                    data=excel_file,
+                    file_name="portfolio_dashboard.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            zip_file = save_charts_to_zip(valid_charts)
+            if zip_file:
+                st.download_button(
+                    label="Save Charts As Zip",
+                    data=zip_file,
+                    file_name="charts.zip",
+                    mime="application/zip"
+                )
+
+    else:
+        st.write("No data to show.")
 
 else:
     st.error("API or dates are invalid or the wrong Paper/Live setting is used.")
