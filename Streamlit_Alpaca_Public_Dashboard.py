@@ -33,7 +33,7 @@ import zipfile
 ################## MAIN ##################
 
 st.title("Alpaca Trading Dashboard") # Streamlit App Title
-st.write("Disclaimer: This software is for educational purposes only. It is provided as-is and is not intended for commercial use without explicit permission. It is not financial advice or a trading recommendation. Use at your own risk. The author is not responsible for financial losses.\n\nSecurity Warning: Ensure your API Key and Secret are kept safe and do not auto-save to browser.")
+st.write("Disclaimer: This tool is for educational purposes only. It is provided as-is and is not intended for commercial use without explicit permission. It is not financial advice or a trading recommendation. Use at your own risk. The author is not responsible for financial losses.\n\nSecurity Warning: Ensure your API Key and Secret are kept safe and do not auto-save to browser.")
 st.sidebar.header("Account Settings") # User Inputs via Streamlit Sidebar
 account = st.sidebar.radio('Select Account', ['Paper', 'Live'])
 key = st.sidebar.text_input('Enter Alpaca API Key', type="password")
