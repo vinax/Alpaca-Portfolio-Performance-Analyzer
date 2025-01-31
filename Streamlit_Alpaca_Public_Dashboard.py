@@ -774,7 +774,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         fig_cumulative = plt.figure(figsize=(10, 5))
                         plt.plot(
                             portfolio_df["Date"],
-                            portfolio_df["Cumulative % Return"] * 100,  # Convert to percentage
+                            portfolio_df["*100 Cumulative % Return"],  # Convert to percentage
                             label="Portfolio Cumulative Return (%)",
                             color="blue",
                         )
