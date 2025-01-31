@@ -52,7 +52,7 @@ with st.expander("ℹ️ **Read Disclaimer & Security Notice**"):
     - The author is **not responsible** for unauthorized access due to poor security practices.  
     """)
 
-st.write("#### Click the **top left arrow** to proceed. Please wait while your account information is being processed.")
+st.write("#### Click top left [>] arrow to proceed and please wait for your request to be processed.")
 
 st.sidebar.header("Account Settings") # User Inputs via Streamlit Sidebar
 account = st.sidebar.radio('Select Account', ['Paper', 'Live'])
