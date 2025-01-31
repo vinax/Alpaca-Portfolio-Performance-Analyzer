@@ -6,7 +6,7 @@
 ##########################################
 
 # Install necessary libraries
-# pip install alpaca-trade-api pandas matplotlib streamlit numpy yfinance scipy scikit-learn
+# pip install alpaca-trade-api pandas matplotlib streamlit numpy yfinance scipy scikit-learn xlsxwriter
 
 # Imports
 import os
