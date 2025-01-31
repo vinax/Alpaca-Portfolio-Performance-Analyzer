@@ -57,6 +57,15 @@ except Exception as e:
 def is_api_key_valid():
     return bool(key.strip()) and bool(secret.strip())
 
+def is_api_connection_valid(api):
+    try:
+        account_info = api.get_account()  # Try fetching account info
+        return account_info is not None
+    except tradeapi.rest.APIError:
+        return False  # API is invalid or the wrong Paper/Live setting is used
+    except Exception:
+        return False  # Any other connection issue
+
 ################## DATES ##################
 
 def get_earliest_latest_date(api): # Function to get the earliest and latest date from Alpaca's portfolio history
@@ -317,7 +326,7 @@ def aggregate_merged_data(merged_df):  # Aggregate merged data
 
 ################## DISPLAY PORTFOLIO OVERVIEW ##################
 
-if is_api_key_valid():
+if is_api_key_valid() and account_info is not None:
 
     st.header("Portfolio Overview")
 
@@ -385,7 +394,7 @@ if is_api_key_valid():
 
 ################## DISPLAY POSITIONS ##################
 
-if is_api_key_valid():
+if is_api_key_valid() and account_info is not None:
 
     st.header("Current Positions")
     def get_positions(api):
@@ -409,7 +418,7 @@ if is_api_key_valid():
 
 ################## DISPLAY TRADE HISTORY ##################
 
-if is_api_key_valid():
+if is_api_key_valid() and account_info is not None:
 
     st.header("Trade History")
     try:
@@ -438,7 +447,7 @@ if is_api_key_valid():
 
 ################## FETCH SPY DAILY PRICES ##################
 
-if is_api_key_valid():
+if is_api_key_valid() and account_info is not None:
 
     def fetch_spy_prices_v2(api_key, api_secret, start_date, end_date, timeframe="1Day"):
         import requests
@@ -507,7 +516,7 @@ if is_api_key_valid():
 
 ################## DISPLAY PORTFOLIO CUMULATIVE GROWTH CHARTS ##################
 
-if is_api_key_valid():
+if is_api_key_valid() and account_info is not None:
 
     st.header("Portfolio Analytics")
 
@@ -754,7 +763,7 @@ if is_api_key_valid():
 
 ################## DISPLAY PERFORMANCE METRICS ##################
 
-if is_api_key_valid():
+if is_api_key_valid() and account_info is not None:
 
     def calculate_metrics(filtered_df, spy_df=None):
         try:
@@ -1005,7 +1014,7 @@ if is_api_key_valid():
 
 ################## SAVE ALL DASHBOARD ACCOUNT DATA ##################
 
-if is_api_key_valid():
+if is_api_key_valid() and account_info is not None:
 
     st.header("Download Options")
 
@@ -1107,7 +1116,7 @@ if is_api_key_valid():
 
     # Portfolio statistics
     portfolio_stats = {
-        "current_value": latest_portfolio_value if not np.isnan(latest_portfolio_value) else "N/A",
+        "current_value": latest_portfolio_value,
         "initial_value": earliest_portfolio_value,
         "value_change": portfolio_value_change,
         "total_deposits": deposits,
@@ -1143,7 +1152,7 @@ if is_api_key_valid():
 
 ################## DOWNLOAD FILES ##################
 
-if is_api_key_valid():
+if is_api_key_valid() and account_info is not None:
 
     def save_all_to_excel(sheets_data, file_name="portfolio_dashboard.xlsx"):
         try:
@@ -1217,4 +1226,4 @@ if is_api_key_valid():
             )
 
 else:
-    st.error("API Key and Secret must be provided to proceed.")
+    st.error("API is invalid or the wrong Paper/Live setting is used.")
