@@ -326,7 +326,7 @@ def aggregate_merged_data(merged_df):  # Aggregate merged data
 
 ################## DISPLAY PORTFOLIO OVERVIEW ##################
 
-if is_api_key_valid()and is_api_connection_valid(api):
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
     st.header("Portfolio Overview")
 
@@ -394,7 +394,7 @@ if is_api_key_valid()and is_api_connection_valid(api):
 
 ################## DISPLAY POSITIONS ##################
 
-if is_api_key_valid()and is_api_connection_valid(api):
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
     st.header("Current Positions")
     def get_positions(api):
@@ -418,7 +418,7 @@ if is_api_key_valid()and is_api_connection_valid(api):
 
 ################## DISPLAY TRADE HISTORY ##################
 
-if is_api_key_valid()and is_api_connection_valid(api):
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
     st.header("Trade History")
     try:
@@ -447,7 +447,7 @@ if is_api_key_valid()and is_api_connection_valid(api):
 
 ################## FETCH SPY DAILY PRICES ##################
 
-if is_api_key_valid()and is_api_connection_valid(api):
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
     def fetch_spy_prices_v2(api_key, api_secret, start_date, end_date, timeframe="1Day"):
         import requests
@@ -516,7 +516,7 @@ if is_api_key_valid()and is_api_connection_valid(api):
 
 ################## DISPLAY PORTFOLIO CUMULATIVE GROWTH CHARTS ##################
 
-if is_api_key_valid()and is_api_connection_valid(api):
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
     st.header("Portfolio Analytics")
 
@@ -763,7 +763,7 @@ if is_api_key_valid()and is_api_connection_valid(api):
 
 ################## DISPLAY PERFORMANCE METRICS ##################
 
-if is_api_key_valid()and is_api_connection_valid(api):
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
     def calculate_metrics(filtered_df, spy_df=None):
         try:
@@ -1014,7 +1014,7 @@ if is_api_key_valid()and is_api_connection_valid(api):
 
 ################## SAVE ALL DASHBOARD ACCOUNT DATA ##################
 
-if is_api_key_valid()and is_api_connection_valid(api):
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
     st.header("Download Options")
 
@@ -1152,7 +1152,7 @@ if is_api_key_valid()and is_api_connection_valid(api):
 
 ################## DOWNLOAD FILES ##################
 
-if is_api_key_valid() and is_api_connection_valid(api):
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
     def save_all_to_excel(sheets_data, file_name="portfolio_dashboard.xlsx"):
         try:
@@ -1226,4 +1226,4 @@ if is_api_key_valid() and is_api_connection_valid(api):
             )
 
 else:
-    st.error("API is invalid or the wrong Paper/Live setting is used.")
+    st.error("API or dates are invalid or the wrong Paper/Live setting is used.")
