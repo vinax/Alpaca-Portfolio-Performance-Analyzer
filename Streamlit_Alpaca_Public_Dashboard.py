@@ -231,7 +231,7 @@ def process_portfolio_history(raw_data): # Process raw portfolio history into a 
         return history_df
     except Exception as e:
         st.error(f"Error processing portfolio history: {e}")
-        return None
+        return pd.DataFrame()
 
 def process_activities_dataframe(activities_raw_data):
     try:
