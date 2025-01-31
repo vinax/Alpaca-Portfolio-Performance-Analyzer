@@ -1107,7 +1107,7 @@ if is_api_key_valid():
 
     # Portfolio statistics
     portfolio_stats = {
-        "current_value": latest_portfolio_value, if not np.isnan(current_value) else "N/A"
+        "current_value": latest_portfolio_value if not np.isnan(current_value) else "N/A",
         "initial_value": earliest_portfolio_value,
         "value_change": portfolio_value_change,
         "total_deposits": deposits,
