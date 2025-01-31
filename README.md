@@ -6,5 +6,3 @@
 6. Streamlit dashboard should open on your browser
 7. Enter your Alpaca API key and secret then hit refresh
 8. Your Alpaca account stats should update and be visible on the Streamlit dashboard
-
-Notes: Only works for live Alpaca accounts as data fetching is only permitted on live accounts. For paper accounts, only the equity curve will be generated.
