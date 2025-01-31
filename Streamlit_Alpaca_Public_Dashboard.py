@@ -231,7 +231,7 @@ def process_portfolio_history(raw_data): # Process raw portfolio history into a 
         return history_df
     except Exception as e:
         st.error(f"Error processing portfolio history: {e}")
-        return pd.DataFrame()
+        return None
 
 def process_activities_dataframe(activities_raw_data):
     try:
@@ -516,7 +516,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
 ################## DISPLAY PORTFOLIO CUMULATIVE GROWTH CHARTS ##################
 
-if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date and merge_dataframes(portfolio_df, activities_df) is not None:
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date and process_portfolio_history(raw_data) is not None::
 
     st.header("Portfolio Analytics")
 
@@ -654,7 +654,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
         else:
             st.error("Either portfolio_df or activities_df is not available.")
             merged_df = None
-        if merge_dataframes(portfolio_df, activities_df) is not None: # Aggregate merged data
+        if process_portfolio_history(raw_data) is not None:: # Aggregate merged data
             aggregate_df = aggregate_merged_data(merged_df)
             if aggregate_df is not None: # Create the filtered table
                 growth_calculation_table = filtered_table(aggregate_df, initial_date=earliest_date, after_date=starting_date, until_date=ending_date)
@@ -765,7 +765,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
 if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
-    if merge_dataframes(portfolio_df, activities_df) is not None:
+    if process_portfolio_history(raw_data) is not None::
 
         def calculate_metrics(filtered_df, spy_df=None):
             try:
@@ -1019,7 +1019,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
 ################## SAVE ALL DASHBOARD ACCOUNT DATA ##################
 
-if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date and merge_dataframes(portfolio_df, activities_df) is not None:
+if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date and process_portfolio_history(raw_data) is not None::
 
     st.header("Download Options")
 
@@ -1159,7 +1159,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
 if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
-    if merge_dataframes(portfolio_df, activities_df) is not None:
+    if process_portfolio_history(raw_data) is not None::
 
         def save_all_to_excel(sheets_data, file_name="portfolio_dashboard.xlsx"):
             try:
