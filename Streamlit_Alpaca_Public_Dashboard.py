@@ -519,7 +519,8 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
     # Ensure portfolio_df and activities_df are valid before merging
-    portfolio_history = get_portfolio_history(api, after_date=starting_date, until_date=ending_date)
+    earliest_date, latest_date = get_earliest_latest_date(api) # Fetch earliest time
+    portfolio_history = get_portfolio_history(api, after_date=earliest_date, until_date=latest_date)
     portfolio_df = process_portfolio_history(portfolio_history["data"]) if portfolio_history and "data" in portfolio_history else None
 
     activities_raw = get_activities(api, after_date=starting_date, until_date=ending_date)
@@ -781,7 +782,8 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
     # Ensure portfolio_df and activities_df are valid before merging
-    portfolio_history = get_portfolio_history(api, after_date=starting_date, until_date=ending_date)
+    earliest_date, latest_date = get_earliest_latest_date(api) # Fetch earliest time
+    portfolio_history = get_portfolio_history(api, after_date=earliest_date, until_date=latest_date)
     portfolio_df = process_portfolio_history(portfolio_history["data"]) if portfolio_history and "data" in portfolio_history else None
 
     activities_raw = get_activities(api, after_date=starting_date, until_date=ending_date)
@@ -1050,7 +1052,8 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
 
     # Ensure portfolio_df and activities_df are valid before merging
-    portfolio_history = get_portfolio_history(api, after_date=starting_date, until_date=ending_date)
+    earliest_date, latest_date = get_earliest_latest_date(api) # Fetch earliest time
+    portfolio_history = get_portfolio_history(api, after_date=earliest_date, until_date=latest_date)
     portfolio_df = process_portfolio_history(portfolio_history["data"]) if portfolio_history and "data" in portfolio_history else None
 
     activities_raw = get_activities(api, after_date=starting_date, until_date=ending_date)
