@@ -51,13 +51,19 @@ with st.expander("ℹ️ **Read Disclaimer & Security Notice**"):
     - **Ensure your API Key and Secret remain secure** and are not exposed or auto-saved in your browser.  
     - The author is **not responsible** for unauthorized access due to poor security practices.  
 
+    ### Third-Party Disclaimer  
+    - **This software is an independent third-party tool and is not affiliated with, endorsed by, or officially connected to Alpaca Securities LLC.**  
+    - **Alpaca** and any related trademarks belong to **Alpaca Securities LLC**, and their use in this project is purely for descriptive purposes.  
+    - For official Alpaca services, visit: [Alpaca's Website](https://alpaca.markets).  
+
     ### License & Source Code  
     This software is open-source and released under the **GNU General Public License v3.0 (GPL-3.0)**.  
     You are free to **use, modify, and distribute** this software as long as any derivative work remains open-source under the same license.  
     **View the full source code here:** [GitHub Repository](https://github.com/vinax/Alpaca-Portfolio-Performance-Analyzer)  
     """)
 
-st.write("#### Click the top left [>] arrow to proceed. Please wait while your request is being processed.")
+st.write("#### Click the top left [>] arrow to proceed."
+st.write("Please wait while your request is being processed.")
 
 st.sidebar.header("Account Settings") # User Inputs via Streamlit Sidebar
 account = st.sidebar.radio('Select Account', ['Paper', 'Live'])
