@@ -1,0 +1,1 @@
+streamlit run "C:\Users\{username}\Documents\Streamlit_Alpaca_Public_Dashboard.py"
