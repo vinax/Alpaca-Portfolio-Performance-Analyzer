@@ -6,3 +6,4 @@ numpy
 yfinance
 scipy
 scikit-learn
+xlsxwriter
