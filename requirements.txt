@@ -1,4 +1,8 @@
-streamlit
 alpaca-trade-api
 pandas
+matplotlib
+streamlit
 numpy
+yfinance
+scipy
+scikit-learn
