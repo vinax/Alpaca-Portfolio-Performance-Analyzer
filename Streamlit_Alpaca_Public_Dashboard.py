@@ -1079,6 +1079,16 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                 """,
                                 unsafe_allow_html=True,
                             )
+
+                    st.markdown("""
+                    <small>  
+                    **Performance Metrics Disclaimer:** The performance metric thresholds used in this tool were selected based on the author's personal specifications and are **not universally applicable trading criteria**.  
+                    Users should **independently evaluate** these thresholds based on their own **trading strategies, risk tolerance, and investment objectives**.  
+                    The author makes **no guarantees** that these metrics will provide profitable or accurate insights for all users.  
+                    Users are encouraged to **adjust the thresholds as needed** to align with their specific requirements.  
+                    </small>  
+                    """, unsafe_allow_html=True)
+                
                 except Exception as e:
                     st.error(f"Error calculating metrics or plotting chart: {e}")
 
