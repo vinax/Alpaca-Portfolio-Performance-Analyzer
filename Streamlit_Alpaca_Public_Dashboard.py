@@ -62,7 +62,7 @@ with st.expander("ℹ️ **Read Disclaimer & Security Notice**"):
     **View the full source code here:** [GitHub Repository](https://github.com/vinax/Alpaca-Portfolio-Performance-Analyzer)  
     """)
 
-st.write("#### Click the top left [>] arrow to proceed."
+st.write("#### Click the top left [>] arrow to proceed.")
 st.write("Please wait while your request is being processed.")
 
 st.sidebar.header("Account Settings") # User Inputs via Streamlit Sidebar
