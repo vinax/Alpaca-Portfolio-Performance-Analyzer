@@ -33,7 +33,7 @@ import zipfile
 ################## MAIN ##################
 
 st.title("Alpaca Trading Dashboard") # Streamlit App Title
-st.write("Disclaimer: This software tool is for educational purposes only. It is provided as-is and is not intended for commercial use without explicit permission. It is not financial advice or a trading recommendation. Use at your own risk. The author is not responsible for financial losses.\n\nSecurity Warning: Ensure your API Key and Secret are kept safe and do not auto-save to browser.\n\nClick top left > arrow to proceed.")
+st.write("Disclaimer: This software tool is for educational purposes only. It is provided as-is and is not intended for commercial use without explicit permission. It is not financial advice or a trading recommendation. Use at your own risk. The author is not responsible for financial losses.\n\nSecurity Warning: Ensure your API Key and Secret are kept safe and do not auto-save to browser.")
 st.sidebar.header("Account Settings") # User Inputs via Streamlit Sidebar
 account = st.sidebar.radio('Select Account', ['Paper', 'Live'])
 key = st.sidebar.text_input('Enter Alpaca API Key', type="password")
@@ -236,26 +236,22 @@ def process_portfolio_history(raw_data): # Process raw portfolio history into a 
 def process_activities_dataframe(activities_raw_data):
     try:
         activities_df = pd.DataFrame(activities_raw_data)  # Convert raw data to DataFrame
-        try: # Extract timestamp from `id` and convert it to datetime
-            activities_df['id_timestamp'] = activities_df['id'].str.slice(0, 17) # Extract the first 17 characters from `id` (timestamp part)
-            activities_df['timestamp'] = pd.to_datetime( # Convert extracted timestamp to datetime
-                activities_df['id_timestamp'], 
-                format='%Y%m%d%H%M%S%f'  # Format matches the `id` timestamp
+        if 'price' not in activities_df.columns:
+            activities_df['price'] = 0.0  # Ensure price column exists
+        activities_df['price'] = pd.to_numeric(activities_df['price'], errors='coerce').fillna(0)  # Convert price to float
+        try: # Extract timestamp from `id` (Alpaca sometimes encodes timestamps in IDs)
+            activities_df['id_timestamp'] = activities_df['id'].str.slice(0, 17)  # Extract timestamp from ID
+            activities_df['timestamp'] = pd.to_datetime(
+                activities_df['id_timestamp'], format='%Y%m%d%H%M%S%f'
             )
         except Exception as e:
             st.write(f"Error processing timestamp from 'id': {e}")
-        try: # Remove timezone information to match portfolio history format
-            activities_df['timestamp'] = activities_df['timestamp'].dt.tz_localize(None)
-        except Exception as e:
-            st.write(f"Error removing timezone info: {e}")
-        try:
-            activities_df.sort_values(by='timestamp', ascending=True, inplace=True) # Sort by the new `timestamp` column
-        except Exception as e:
-            st.write(f"Error sorting activities dataframe: {e}")
+        activities_df['timestamp'] = activities_df['timestamp'].dt.tz_localize(None) # Remove timezone info for compatibility with portfolio history
+        activities_df.sort_values(by='timestamp', ascending=True, inplace=True) # Ensure sorting by timestamp
         return activities_df
     except Exception as e:
         st.write(f"Error processing activities dataframe: {e}")
-        return None
+        return pd.DataFrame()  # Return an empty DataFrame if processing fails
 
 def merge_dataframes(portfolio_df, activities_df): # Merge two dataframes
     try:
@@ -1205,82 +1201,84 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                     #st.write("Aggregated Account Data:")
                     #st.dataframe(aggregated_data)
 
-            ################## DOWNLOAD FILES ##################
+                ################## DOWNLOAD FILES ##################
 
-            if is_api_key_valid() and is_api_connection_valid(api) and starting_date < ending_date:
+                def save_all_to_excel(sheets_data, file_name="portfolio_dashboard.xlsx"):
+                    try:
+                        output = BytesIO()
+                        with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                            for sheet_name, df in sheets_data.items():
+                                df.to_excel(writer, index=False, sheet_name=sheet_name[:31])  # Sheet names must be <= 31 chars
+                        output.seek(0)
+                        return output
+                    except Exception as e:
+                        st.error(f"Error saving all data to Excel: {e}")
+                        return None
 
+                def save_charts_to_zip(charts, zip_file_name="charts.zip"):
+                    try:
+                        zip_buffer = BytesIO()  # Create an in-memory ZIP file
+                        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file: # Open the ZIP file for writing
+                            for chart_name, fig in charts.items():
+                                if isinstance(fig, plt.Figure):  # Ensure valid Matplotlib figure
+                                    img_buffer = BytesIO() # Save the figure to an in-memory BytesIO buffer
+                                    fig.savefig(img_buffer, format="png", dpi=150)
+                                    img_buffer.seek(0)  # Rewind the buffer to the beginning
+                                    zip_file.writestr(f"{chart_name}.png", img_buffer.read()) # Write the image to the ZIP file
+                                else:
+                                    st.error(f"Invalid chart object for {chart_name}: {type(fig)}")
+                        zip_buffer.seek(0)  # Rewind the ZIP buffer for reading
+                        return zip_buffer
+                    except Exception as e:
+                        st.error(f"Error creating ZIP file: {e}")
+                        return None
 
+                if 'portfolio_stats' in locals() and portfolio_stats:
+                    portfolio_overview_df = create_portfolio_overview_df(portfolio_stats)
+                else:
+                    st.error("Error: Portfolio statistics not available.")
+                    portfolio_overview_df = pd.DataFrame()  # Avoids crashing
 
-                    def save_all_to_excel(sheets_data, file_name="portfolio_dashboard.xlsx"):
-                        try:
-                            output = BytesIO()
-                            with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-                                for sheet_name, df in sheets_data.items():
-                                    df.to_excel(writer, index=False, sheet_name=sheet_name[:31])  # Sheet names must be <= 31 chars
-                            output.seek(0)
-                            return output
-                        except Exception as e:
-                            st.error(f"Error saving all data to Excel: {e}")
-                            return None
+                # Gather all data into a dictionary for export
+                sheets_data = {
+                    "Portfolio Overview": portfolio_overview_df,
+                    "Current Positions": positions,
+                    "Trade History": formatted_trades if 'formatted_trades' in locals() else pd.DataFrame(),
+                    "Portfolio History": processed_portfolio,
+                    "Activities": processed_activities,
+                    "Aggregated Account Data": aggregated_data,
+                    "Growth Calculation Table": growth_calculation_table,
+                    "SPY Returns": spy_prices,
+                    "Performance Metrics": performance_metrics_df,
+                }
 
-                    def save_charts_to_zip(charts, zip_file_name="charts.zip"):
-                        try:
-                            zip_buffer = BytesIO()  # Create an in-memory ZIP file
-                            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file: # Open the ZIP file for writing
-                                for chart_name, fig in charts.items():
-                                    if isinstance(fig, plt.Figure):  # Ensure valid Matplotlib figure
-                                        img_buffer = BytesIO() # Save the figure to an in-memory BytesIO buffer
-                                        fig.savefig(img_buffer, format="png", dpi=150)
-                                        img_buffer.seek(0)  # Rewind the buffer to the beginning
-                                        zip_file.writestr(f"{chart_name}.png", img_buffer.read()) # Write the image to the ZIP file
-                                    else:
-                                        st.error(f"Invalid chart object for {chart_name}: {type(fig)}")
-                            zip_buffer.seek(0)  # Rewind the ZIP buffer for reading
-                            return zip_buffer
-                        except Exception as e:
-                            st.error(f"Error creating ZIP file: {e}")
-                            return None
+                # Combine all charts into one dictionary
+                charts = {
+                    "Portfolio Returns Chart": portfolio_returns_chart.get("Portfolio Returns Chart"),
+                    "SPY Returns Chart": combined_charts.get("SPY Returns Chart"),
+                    "Cumulative Growth Chart": combined_charts.get("Cumulative Growth Chart"),
+                    "Drawdown Chart": drawdown_chart,
+                }
 
-                    # Gather all data into a dictionary for export
-                    sheets_data = {
-                        "Portfolio Overview": create_portfolio_overview_df(portfolio_stats),
-                        "Current Positions": positions,
-                        "Trade History": formatted_trades if 'formatted_trades' in locals() else pd.DataFrame(),
-                        "Portfolio History": processed_portfolio,
-                        "Activities": processed_activities,
-                        "Aggregated Account Data": aggregated_data,
-                        "Growth Calculation Table": growth_calculation_table,
-                        "SPY Returns": spy_prices,
-                        "Performance Metrics": performance_metrics_df,
-                    }
-
-                    # Combine all charts into one dictionary
-                    charts = {
-                        "Portfolio Returns Chart": portfolio_returns_chart.get("Portfolio Returns Chart"),
-                        "SPY Returns Chart": combined_charts.get("SPY Returns Chart"),
-                        "Cumulative Growth Chart": combined_charts.get("Cumulative Growth Chart"),
-                        "Drawdown Chart": drawdown_chart,
-                    }
-
-                    # Button to download the compiled Excel file with charts embedded
-                    if st.button("Download All Data"):
-                        valid_charts = {k: v for k, v in charts.items() if isinstance(v, plt.Figure)}
-                        excel_file = save_all_to_excel(sheets_data)
-                        if excel_file:
-                            st.download_button(
-                                label="Save Report As Excel",
-                                data=excel_file,
-                                file_name="portfolio_dashboard.xlsx",
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                            )
-                        zip_file = save_charts_to_zip(valid_charts)
-                        if zip_file:
-                            st.download_button(
-                                label="Save Charts As Zip",
-                                data=zip_file,
-                                file_name="charts.zip",
-                                mime="application/zip"
-                            )
+                # Button to download the compiled Excel file with charts embedded
+                if st.button("Download All Data"):
+                    valid_charts = {k: v for k, v in charts.items() if isinstance(v, plt.Figure)}
+                    excel_file = save_all_to_excel(sheets_data)
+                    if excel_file:
+                        st.download_button(
+                            label="Save Report As Excel",
+                            data=excel_file,
+                            file_name="portfolio_dashboard.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+                    zip_file = save_charts_to_zip(valid_charts)
+                    if zip_file:
+                        st.download_button(
+                            label="Save Charts As Zip",
+                            data=zip_file,
+                            file_name="charts.zip",
+                            mime="application/zip"
+                        )
 
     else:
         st.write("No data to show.")
