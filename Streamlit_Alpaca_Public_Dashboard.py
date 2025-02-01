@@ -1,6 +1,7 @@
 ##########################################
 ##                                      ##
 ##      ALPACA PORTFOLIO DASHBOARD      ##
+##         PERFORMANCE ANALYZER         ##
 ##           Copyright © 2025           ##
 ##                                      ##
 ##########################################
@@ -32,7 +33,7 @@ import zipfile
 
 ################## MAIN ##################
 
-st.title("Alpaca Portfolio Dashboard") # Streamlit App Title
+st.title("Alpaca Portfolio Dashboard Performance Analyzer") # Streamlit App Title
 st.write("### About")
 st.write("This is a basic web app/software tool designed to provide Alpaca users with a user-friendly way to obtain detailed analytic insights into their account portfolio history.")
 
