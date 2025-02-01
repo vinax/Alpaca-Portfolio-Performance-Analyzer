@@ -33,7 +33,8 @@ import zipfile
 
 ################## MAIN ##################
 
-st.title("Alpaca Portfolio Dashboard\nPerformance Analyzer") # Streamlit App Title
+st.title("Alpaca Portfolio Dashboard") # Streamlit App Title
+st.title("Performance Analyzer")
 st.write("### About")
 st.write("This is a basic web app/software tool designed to provide Alpaca users with a user-friendly way to obtain detailed analytic insights into their account portfolio history.")
 
