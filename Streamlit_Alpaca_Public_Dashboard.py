@@ -868,7 +868,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         avg_win = returns[returns > 0].mean() if (returns > 0).any() else 0
                         avg_loss = abs(returns[returns < 0].mean()) if (returns < 0).any() else 0
                         expectancy = (p_win * avg_win) - (p_loss * avg_loss)
-                                        value = f"({float(value[0]):.6f}, {float(value[1]):.6f})"
+
                         if spy_df is not None and not spy_df.empty:
                             merged_df = pd.merge(filtered_df[["Date", "*100 % Return"]], spy_df[["Date", "*100 % Return"]], on="Date", suffixes=("_Portfolio", "_SPY"))
                             merged_df = merged_df.dropna()
