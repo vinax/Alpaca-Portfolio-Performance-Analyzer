@@ -938,18 +938,14 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                 boot_mean_psr = np.mean(boot_psr_values)
                                 boot_pval_psr = 2 * min(np.mean(boot_psr_values >= 0), np.mean(boot_psr_values <= 0)) # Compute p-value (two-tailed test for PSR > 0)
                             else:
-                                boot_mean_alpha, boot_ci_lower_alpha, boot_ci_upper_alpha, boot_pval_alpha, \ # Using tuple unpacking to assign None values more concisely
-                                boot_mean_psr, boot_ci_lower_psr, boot_ci_upper_psr, boot_pval_psr = (None,) * 8
+                                boot_mean_alpha, boot_ci_lower_alpha, boot_ci_upper_alpha, boot_pval_alpha, boot_mean_psr, boot_ci_lower_psr, boot_ci_upper_psr, boot_pval_psr = (None,) * 8
                             portfolio_mean = merged_df["*100 % Return_Portfolio"].mean()
                             spy_mean = merged_df["*100 % Return_SPY"].mean()
                             portfolio_variance = merged_df["*100 % Return_Portfolio"].var()
                             spy_variance = merged_df["*100 % Return_SPY"].var()
                             correlation = np.corrcoef(merged_df["*100 % Return_Portfolio"], merged_df["*100 % Return_SPY"])[0, 1]
                         else:
-                            alpha, beta, r_squared, fama_alpha, fama_pval, t_stat, t_pval, wilcoxon_stat, wilcoxon_pval, \
-                            boot_mean_alpha, boot_ci_lower_alpha, boot_ci_upper_alpha, boot_pval_alpha, \
-                            z_stat_psr, z_pval_psr, boot_mean_psr, boot_ci_lower_psr, boot_ci_upper_psr, boot_pval_psr, \
-                            portfolio_mean, spy_mean, portfolio_variance, spy_variance, correlation = (None,) * 24
+                            alpha, beta, r_squared, fama_alpha, fama_pval, t_stat, t_pval, wilcoxon_stat, wilcoxon_pval, boot_mean_alpha, boot_ci_lower_alpha, boot_ci_upper_alpha, boot_pval_alpha, z_stat_psr, z_pval_psr, boot_mean_psr, boot_ci_lower_psr, boot_ci_upper_psr, boot_pval_psr, portfolio_mean, spy_mean, portfolio_variance, spy_variance, correlation = (None,) * 24
 
                         lw_test = LedoitWolf().fit(np.array(returns).reshape(-1, 1)).shrinkage_
                         lw_pval = norm.sf(lw_test)
