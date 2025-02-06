@@ -1091,6 +1091,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                         meets_threshold = abs(float(value) - target) < 0.1 * target
                                     elif "Should not include 0" in ideal:
                                         meets_threshold = not (float(value[0]) <= 0 <= float(value[1]))
+                                        value = f"({float(value[0]):.4f}, {float(value[1]):.4f})"
                                 except (ValueError, TypeError):
                                     meets_threshold = None  # Skip non-numeric thresholds
 
