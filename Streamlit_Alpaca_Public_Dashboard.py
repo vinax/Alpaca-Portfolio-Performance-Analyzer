@@ -908,7 +908,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             else:
                                 wilcoxon_stat, wilcoxon_pval, paired_t_stat, paired_t_pval = (None,) * 4
                             benchmark_sharpe = spy_sharpe_ratio # Use SPY's Sharpe Ratio as the benchmark
-                            sharpe_std_error = returns.std() / np.sqrt(len(returns)) # Compute the standard error of the Sharpe Ratio
+                            sharpe_std_error = sharpe_std_error = (1 / np.sqrt(len(returns))) * np.sqrt(1 + 0.5 * sharpe_ratio**2) # returns.std() / np.sqrt(len(returns)) # Compute the standard error of the Sharpe Ratio
                             z_stat_sharpe = sharpe_ratio / sharpe_std_error
                             z_pval_sharpe = 2 * (1 - norm.cdf(abs(z_stat_sharpe)))  # Two-tailed test
                             z_stat_sharpe_vs_spy = (sharpe_ratio - spy_sharpe_ratio) / sharpe_std_error
@@ -1048,7 +1048,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                 "Bootstrap CI on PSR": (boot_ci_lower_psr, boot_ci_upper_psr) if (boot_ci_lower_psr, boot_ci_upper_psr) is not None else None,
                                 "P-value of Bootstrap on PSR": boot_pval_psr if boot_pval_psr is not None else None,
                                 "Z-test on Benchmark-Adjusted Probabilistic Sharpe Ratio (BPSR)": z_stat_bpsr if z_stat_bpsr is not None else None,
-                                "P-value of Benchmark-Adjusted Z-test on Probabilistic Sharpe Ratio (BPSR)": z_pval_bpsr if z_pval_bpsr is not None else None,
+                                "P-value of Z-test on Benchmark-Adjusted Probabilistic Sharpe Ratio (BPSR)": z_pval_bpsr if z_pval_bpsr is not None else None,
                                 "Portfolio Mean": portfolio_mean if portfolio_mean is not None else None,
                                 "SPY Mean": spy_mean if spy_mean is not None else None,
                                 "Portfolio Variance": portfolio_variance if portfolio_variance is not None else None,
