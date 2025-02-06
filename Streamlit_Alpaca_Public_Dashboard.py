@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import yfinance as yf
 import scipy
-from scipy.stats import ttest_ind, ttest_1samp, skew, kurtosis, linregress, t, wilcoxon, norm, bootstrap
+from scipy.stats import ttest_ind, ttest_1samp, ttest_rel, skew, kurtosis, linregress, t, wilcoxon, norm, bootstrap
 import arch
 from arch.unitroot import VarianceRatio
 import sklearn
