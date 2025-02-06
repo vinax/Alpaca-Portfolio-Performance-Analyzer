@@ -988,7 +988,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             "Ledoit-Wolf Test on Sharpe Ratios": "Close to 0",  # Measures Sharpe Ratio robustness
                             "P-value of Ledoit-Wolf Test on Sharpe Ratios": "< 0.05",  # Confidence in Ledoit-Wolf test
                             "Paired T-test on Sharpe Ratios": "> 2.0" # Tests if the portfolio’s mean return is significantly different from SPY's returns
-                            "P-value of Paired T-test on Sharpe Ratios": "< 0.05" # Statistical significance of portfolio Sharpe ratio from SPY
+                            "P-value of Paired T-test on Sharpe Ratios": "< 0.05", # Statistical significance of portfolio Sharpe ratio from SPY
                             "Z-test on Probabilistic Sharpe Ratio (PSR)": "> 1.96",  # Z-score significance of PSR
                             "P-value of Z-test on Probabilistic Sharpe Ratio (PSR)": "< 0.05",  # Significance of Z-test for PSR
                             "Bootstrap on PSR": "> 1.0",  # Bootstrapped PSR should be above 1 for robustness
