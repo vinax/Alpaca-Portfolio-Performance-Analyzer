@@ -858,8 +858,15 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         psr = 1 - norm.cdf(1 / (1 + sharpe_ratio))
                         bsr = (sharpe_ratio * 1**2 + 0) / (1 + 1**2)
                         downside_deviation = np.sqrt(np.mean(np.minimum(returns, 0) ** 2))
+                        #hurst = np.polyfit(np.log(range(2, 100)), np.log([np.std(np.subtract(returns[lag:], returns[:-lag])) for lag in range(2, 100)]), 1)[0]
+                        lags = range(2, min(len(returns) // 2, 100))
+                        std_values = [np.std(np.subtract(returns[lag:], returns[:-lag])) for lag in lags]
+                        std_values = [val for val in std_values if val > 0]
+                        if len(std_values) == 0 or np.std(std_values) == 0:
+                            hurst = np.nan
+                        else:
+                            hurst = np.polyfit(np.log(lags[:len(std_values)]), np.log(std_values), 1)[0]
                         sortino_ratio = (returns.mean() * 252) / (downside_deviation * np.sqrt(252))
-                        hurst = np.polyfit(np.log(range(2, 100)), np.log([np.std(np.subtract(returns[lag:], returns[:-lag])) for lag in range(2, 100)]), 1)[0]
                         win_rate = (returns > 0).mean()
                         profit_factor = returns[returns > 0].sum() / abs(returns[returns < 0].sum())
 
