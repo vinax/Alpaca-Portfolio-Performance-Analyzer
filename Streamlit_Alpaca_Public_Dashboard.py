@@ -924,7 +924,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                 boot_samples_portfolio = np.random.choice(merged_df["*100 % Return_Portfolio"], size=(1000, len(merged_df)), replace=True) # Manually generate bootstrapped samples for Portfolio and SPY returns
                                 boot_samples_spy = np.random.choice(merged_df["*100 % Return_SPY"], size=(1000, len(merged_df)), replace=True)
                                 boot_alpha_values = boot_samples_portfolio.mean(axis=1) - boot_samples_spy.mean(axis=1) # Compute bootstrapped Alpha (Portfolio Returns - SPY Returns)
-                                boot_ci_lower_alpha, boot_ci_upper_alpha = float(np.percentile(boot_alpha_values, [2.5, 97.5])) # Compute confidence interval for Alpha
+                                boot_ci_lower_alpha, boot_ci_upper_alpha = np.percentile(boot_alpha_values, [2.5, 97.5]) # Compute confidence interval for Alpha
                                 boot_mean_alpha = np.mean(boot_alpha_values)
                                 boot_pval_alpha = 2 * min(np.mean(boot_alpha_values >= 0), np.mean(boot_alpha_values <= 0)) # Compute p-value (two-tailed test for Alpha > 0)
                                 # Bootstrapping PSR (Probability Sharpe > SPY)
@@ -934,7 +934,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                     norm.cdf((boot_sharpe_ratios[i] - boot_sharpe_ratios_spy[i]) / (boot_samples_portfolio.std(axis=1)[i] / np.sqrt(len(merged_df))))
                                     for i in range(1000)
                                 ])
-                                boot_ci_lower_psr, boot_ci_upper_psr = float(np.percentile(boot_psr_values, [2.5, 97.5])) # Compute confidence interval for PSR
+                                boot_ci_lower_psr, boot_ci_upper_psr = np.percentile(boot_psr_values, [2.5, 97.5]) # Compute confidence interval for PSR
                                 boot_mean_psr = np.mean(boot_psr_values)
                                 boot_pval_psr = 2 * min(np.mean(boot_psr_values >= 0), np.mean(boot_psr_values <= 0)) # Compute p-value (two-tailed test for PSR > 0)
                             else:
