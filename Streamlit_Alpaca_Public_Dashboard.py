@@ -904,7 +904,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             t_stat, t_pval = ttest_1samp(merged_df["*100 % Return_Portfolio"], 0)
                             if len(merged_df) >= 10:
                                 wilcoxon_stat, wilcoxon_pval = wilcoxon(merged_df["*100 % Return_Portfolio"] - merged_df["*100 % Return_SPY"])
-                                paired_t_stat, paired_t_pval = stats.ttest_rel(merged_df["*100 % Return_Portfolio"], merged_df["*100 % Return_SPY"])
+                                paired_t_stat, paired_t_pval = ttest_rel(merged_df["*100 % Return_Portfolio"], merged_df["*100 % Return_SPY"])
                             else:
                                 wilcoxon_stat, wilcoxon_pval, paired_t_stat, paired_t_pval = (None,) * 4
                             benchmark_sharpe = spy_sharpe_ratio # Use SPY's Sharpe Ratio as the benchmark
@@ -931,7 +931,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                 boot_sharpe_ratios = boot_samples_portfolio.mean(axis=1) / boot_samples_portfolio.std(axis=1) * np.sqrt(252)
                                 boot_sharpe_ratios_spy = boot_samples_spy.mean(axis=1) / boot_samples_spy.std(axis=1) * np.sqrt(252)
                                 boot_psr_values = 1 - np.array([ # Compute PSR for each bootstrap sample (probability Sharpe > SPY)
-                                    stats.norm.cdf((boot_sharpe_ratios[i] - boot_sharpe_ratios_spy[i]) / (boot_samples_portfolio.std(axis=1)[i] / np.sqrt(len(merged_df))))
+                                    norm.cdf((boot_sharpe_ratios[i] - boot_sharpe_ratios_spy[i]) / (boot_samples_portfolio.std(axis=1)[i] / np.sqrt(len(merged_df))))
                                     for i in range(1000)
                                 ])
                                 boot_ci_lower_psr, boot_ci_upper_psr = float(np.percentile(boot_psr_values, [2.5, 97.5])) # Compute confidence interval for PSR
