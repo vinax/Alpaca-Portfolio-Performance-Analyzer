@@ -916,7 +916,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             z_stat_psr = sharpe_ratio / ((returns.std() * np.sqrt(252)) / np.sqrt(len(returns)))
                             z_pval_psr = 2 * (1 - norm.cdf(abs(z_stat_psr)))
                             z_stat_bpsr = (sharpe_ratio - benchmark_sharpe) / sharpe_std_error # Compute the Z-score for PSR against the benchmark
-                            z_pval_bpsr = 1 - norm.cdf(z_stat_bpsr)  # One-tailed test
+                            z_pval_bpsr = max(1 - norm.cdf(min(z_stat_bpsr, 6)), 0)  # One-tailed test
                             bpsr = 1 - z_pval_bpsr # Result: Probability that the Sharpe Ratio is above the SPY Sharpe Ratio
                             np.random.seed(42)
                             if len(merged_df) >= 10 and len(spy_df) >= 10:  # Ensure data is valid before bootstrapping
@@ -1048,7 +1048,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                 "Bootstrap CI on PSR": (boot_ci_lower_psr, boot_ci_upper_psr) if (boot_ci_lower_psr, boot_ci_upper_psr) is not None else None,
                                 "P-value of Bootstrap on PSR": boot_pval_psr if boot_pval_psr is not None else None,
                                 "Z-test on Benchmark-Adjusted Probabilistic Sharpe Ratio (BPSR)": z_stat_bpsr if z_stat_bpsr is not None else None,
-                                "P-value of Benchmark-Adjusted Z-test on Probabilistic Sharpe Ratio (BPSR)": z_pval_bpsr if z_pval_psr is not None else None,
+                                "P-value of Benchmark-Adjusted Z-test on Probabilistic Sharpe Ratio (BPSR)": z_pval_bpsr if z_pval_bpsr is not None else None,
                                 "Portfolio Mean": portfolio_mean if portfolio_mean is not None else None,
                                 "SPY Mean": spy_mean if spy_mean is not None else None,
                                 "Portfolio Variance": portfolio_variance if portfolio_variance is not None else None,
