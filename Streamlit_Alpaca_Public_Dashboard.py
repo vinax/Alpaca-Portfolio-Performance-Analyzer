@@ -924,8 +924,8 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             "Sortino Ratio": "> 1.0",  # Adjusted Sharpe Ratio focusing on downside risk
                             "Calmar Ratio": "> 0.5",  # Risk-adjusted return based on max drawdown
                             "Ulcer Index": "< 5",  # Measures drawdown severity and recovery time
-                            "Max Drawdown": "< -0.2",  # Largest peak-to-trough decline in portfolio value
-                            "Average Drawdown": "< -0.1",  # Average percentage decline from peak values
+                            "Max Drawdown": "> -0.2",  # Largest peak-to-trough decline in portfolio value
+                            "Average Drawdown": "> -0.1",  # Average percentage decline from peak values
                             "Recovery Time": "< 180",  # Number of days required to recover from max drawdown
                             "Win Rate": "> 0.5",  # Percentage of profitable trades
                             "Profit Factor": "> 1.5",  # Ratio of gross profits to gross losses
@@ -1091,7 +1091,8 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                         target = float(ideal.split("to")[1].replace("(", "").replace(")", "").strip())
                                         meets_threshold = abs(float(value) - target) < 0.1 * target
                                     elif "Should not include 0" in ideal:
-                                        meets_threshold = not (value[0] <= 0 <= value[1])
+                                        meets_threshold = not (float(value[0]) <= 0 <= float(value[1]))
+                                        value = f"({float(value[0]):.6f}, {float(value[1]):.6f})"
                                 except (ValueError, TypeError):
                                     meets_threshold = None  # Skip non-numeric thresholds
 
