@@ -919,7 +919,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             z_pval_bpsr = 1 - norm.cdf(z_stat_bpsr)  # One-tailed test
                             bpsr = 1 - z_pval_bpsr # Result: Probability that the Sharpe Ratio is above the SPY Sharpe Ratio
                             np.random.seed(42)
-                            if len(merged_df) >= 10 and len(spy_returns_df) >= 10:  # Ensure data is valid before bootstrapping
+                            if len(merged_df) >= 10 and len(spy_df) >= 10:  # Ensure data is valid before bootstrapping
                                 # Bootstrapping Alpha (Portfolio vs. SPY Excess Return)
                                 boot_samples_portfolio = np.random.choice(merged_df["*100 % Return_Portfolio"], size=(1000, len(merged_df)), replace=True) # Manually generate bootstrapped samples for Portfolio and SPY returns
                                 boot_samples_spy = np.random.choice(merged_df["*100 % Return_SPY"], size=(1000, len(merged_df)), replace=True)
