@@ -857,8 +857,18 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         volatility = returns.std() * np.sqrt(252)
                         sharpe_ratio = returns.mean() / returns.std() * np.sqrt(252)
                         spy_sharpe_ratio = spy_returns.mean() / spy_returns.std() * np.sqrt(252)
-                        psr = 1 - norm.cdf(1 / (1 + sharpe_ratio))
-                        bsr = (sharpe_ratio * 1**2 + 0) / (1 + 1**2)
+                        #psr = 1 - norm.cdf(1 / (1 + sharpe_ratio))
+                        #bsr = (sharpe_ratio * 1**2 + 0) / (1 + 1**2)
+                        n = len(returns)
+                        # ---- Probabilistic Sharpe Ratio (PSR) ----
+                        sigma_SR = np.sqrt((1 - (sharpe_ratio**2) / 2) / n)  # Estimate the standard error of the Sharpe ratio
+                        if sigma_SR == 0: # Avoid division by zero
+                            psr = np.nan
+                        else:
+                            psr = norm.cdf(sharpe_ratio / sigma_SR) # PSR: probability that the true Sharpe ratio is greater than 0
+                        # ---- Bayesian Sharpe Ratio (BSR) ----
+                        k = 30  # 'k' is a hyperparameter representing the equivalent prior sample size
+                        bsr = (n * sharpe_ratio) / (n + k)  # Use a simple Bayesian shrinkage estimator with a prior mean of 0.
                         tracking_error = (returns - spy_returns).std() * np.sqrt(252)  # Volatility of return difference
                         info_ratio = (returns.mean() - spy_returns.mean()) / tracking_error if tracking_error != 0 else np.nan
 
