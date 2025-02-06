@@ -843,6 +843,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                 def calculate_metrics(filtered_df, spy_df=None):
                     try:
                         returns = filtered_df['*100 % Return'].dropna()
+                        spy_returns = spy_df['*100 % Return'].dropna()
                         cumulative_values = filtered_df['Cumulative Value Return']
                         years = len(filtered_df) / 252
                         trades = len(returns)
@@ -855,9 +856,11 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         cagr = ((1 + returns).prod() ** (1 / years)) - 1
                         volatility = returns.std() * np.sqrt(252)
                         sharpe_ratio = returns.mean() / returns.std() * np.sqrt(252)
+                        spy_sharpe_ratio = spy_returns.mean() / spy_returns.std() * np.sqrt(252)
                         psr = 1 - norm.cdf(1 / (1 + sharpe_ratio))
                         bsr = (sharpe_ratio * 1**2 + 0) / (1 + 1**2)
-                        downside_deviation = np.sqrt(np.mean(np.minimum(returns, 0) ** 2))
+                        tracking_error = (returns - spy_returns).std() * np.sqrt(252)  # Volatility of return difference
+                        info_ratio = (returns.mean() - spy_returns.mean()) / tracking_error if tracking_error != 0 else np.nan
 
                         returns_array = np.array(returns.dropna())  # Drop NaNs to avoid errors
                         N = len(returns_array)
@@ -879,6 +882,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                 RS.append(np.mean(rescaled_ranges))
                             hurst = float(np.polyfit(np.log(chunk_sizes), np.log(RS), 1)[0]) # Fit the log-log relationship to estimate the Hurst exponent
 
+                        downside_deviation = np.sqrt(np.mean(np.minimum(returns, 0) ** 2))
                         sortino_ratio = (returns.mean() * 252) / (downside_deviation * np.sqrt(252))
                         win_rate = (returns > 0).mean()
                         profit_factor = returns[returns > 0].sum() / abs(returns[returns < 0].sum())
@@ -900,31 +904,52 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             t_stat, t_pval = ttest_1samp(merged_df["*100 % Return_Portfolio"], 0)
                             if len(merged_df) >= 10:
                                 wilcoxon_stat, wilcoxon_pval = wilcoxon(merged_df["*100 % Return_Portfolio"] - merged_df["*100 % Return_SPY"])
+                                paired_t_stat, paired_t_pval = stats.ttest_rel(merged_df["*100 % Return_Portfolio"], merged_df["*100 % Return_SPY"]
                             else:
-                                wilcoxon_stat, wilcoxon_pval = None, None
-                            bootstrap_results = bootstrap((merged_df["*100 % Return_Portfolio"],), np.mean, confidence_level=0.95, n_resamples=1000)
-                            boot_mean = np.mean(bootstrap_results.bootstrap_distribution)
-                            boot_ci_lower, boot_ci_upper = float(bootstrap_results.confidence_interval.low), float(bootstrap_results.confidence_interval.high)
-                            boot_pval = 2 * min(
-                                np.mean(bootstrap_results.bootstrap_distribution >= 0), 
-                                np.mean(bootstrap_results.bootstrap_distribution <= 0)
-                            )
+                                wilcoxon_stat, wilcoxon_pval, paired_t_stat, paired_t_pval = (None,) * 4
+                            benchmark_sharpe = spy_sharpe_ratio # Use SPY's Sharpe Ratio as the benchmark
+                            sharpe_std_error = returns.std() / np.sqrt(len(returns)) # Compute the standard error of the Sharpe Ratio
+                            z_stat_sharpe = sharpe_ratio / sharpe_std_error
+                            z_pval_sharpe = 2 * (1 - norm.cdf(abs(z_stat_sharpe)))  # Two-tailed test
+                            z_stat_sharpe_vs_spy = (sharpe_ratio - spy_sharpe_ratio) / sharpe_std_error
+                            z_pval_sharpe_vs_spy = 1 - norm.cdf(z_stat_sharpe_vs_spy)  # One-tailed test (is Sharpe > SPY?)
                             z_stat_psr = sharpe_ratio / ((returns.std() * np.sqrt(252)) / np.sqrt(len(returns)))
                             z_pval_psr = 2 * (1 - norm.cdf(abs(z_stat_psr)))
-                            bootstrap_results_psr = bootstrap((returns,), lambda r: (r.mean() / r.std()) * np.sqrt(252), confidence_level=0.95, n_resamples=1000)
-                            boot_mean_psr = np.mean(bootstrap_results_psr.bootstrap_distribution)
-                            boot_ci_lower_psr, boot_ci_upper_psr = float(bootstrap_results_psr.confidence_interval.low), float(bootstrap_results_psr.confidence_interval.high)
-                            boot_pval_psr = 2 * min(
-                                np.mean(bootstrap_results_psr.bootstrap_distribution >= 0), 
-                                np.mean(bootstrap_results_psr.bootstrap_distribution <= 0)
-                            )
+                            z_stat_bpsr = (sharpe_ratio - benchmark_sharpe) / sharpe_std_error # Compute the Z-score for PSR against the benchmark
+                            z_pval_bpsr = 1 - norm.cdf(z_stat_bpsr)  # One-tailed test
+                            bpsr = 1 - z_pval_bpsr # Result: Probability that the Sharpe Ratio is above the SPY Sharpe Ratio
+                            np.random.seed(42)
+                            if len(merged_df) >= 10 and len(spy_returns_df) >= 10:  # Ensure data is valid before bootstrapping
+                                # Bootstrapping Alpha (Portfolio vs. SPY Excess Return)
+                                boot_samples_portfolio = np.random.choice(merged_df["*100 % Return_Portfolio"], size=(1000, len(merged_df)), replace=True) # Manually generate bootstrapped samples for Portfolio and SPY returns
+                                boot_samples_spy = np.random.choice(merged_df["*100 % Return_SPY"], size=(1000, len(merged_df)), replace=True)
+                                boot_alpha_values = boot_samples_portfolio.mean(axis=1) - boot_samples_spy.mean(axis=1) # Compute bootstrapped Alpha (Portfolio Returns - SPY Returns)
+                                boot_ci_lower_alpha, boot_ci_upper_alpha = float(np.percentile(boot_alpha_values, [2.5, 97.5])) # Compute confidence interval for Alpha
+                                boot_mean_alpha = np.mean(boot_alpha_values)
+                                boot_pval_alpha = 2 * min(np.mean(boot_alpha_values >= 0), np.mean(boot_alpha_values <= 0)) # Compute p-value (two-tailed test for Alpha > 0)
+                                # Bootstrapping PSR (Probability Sharpe > SPY)
+                                boot_sharpe_ratios = boot_samples_portfolio.mean(axis=1) / boot_samples_portfolio.std(axis=1) * np.sqrt(252)
+                                boot_sharpe_ratios_spy = boot_samples_spy.mean(axis=1) / boot_samples_spy.std(axis=1) * np.sqrt(252)
+                                boot_psr_values = 1 - np.array([ # Compute PSR for each bootstrap sample (probability Sharpe > SPY)
+                                    stats.norm.cdf((boot_sharpe_ratios[i] - boot_sharpe_ratios_spy[i]) / (boot_samples_portfolio.std(axis=1)[i] / np.sqrt(len(merged_df))))
+                                    for i in range(1000)
+                                ])
+                                boot_ci_lower_psr, boot_ci_upper_psr = float(np.percentile(boot_psr_values, [2.5, 97.5])) # Compute confidence interval for PSR
+                                boot_mean_psr = np.mean(boot_psr_values)
+                                boot_pval_psr = 2 * min(np.mean(boot_psr_values >= 0), np.mean(boot_psr_values <= 0)) # Compute p-value (two-tailed test for PSR > 0)
+                            else:
+                                boot_mean_alpha, boot_ci_lower_alpha, boot_ci_upper_alpha, boot_pval_alpha, \ # Using tuple unpacking to assign None values more concisely
+                                boot_mean_psr, boot_ci_lower_psr, boot_ci_upper_psr, boot_pval_psr = (None,) * 8
                             portfolio_mean = merged_df["*100 % Return_Portfolio"].mean()
                             spy_mean = merged_df["*100 % Return_SPY"].mean()
                             portfolio_variance = merged_df["*100 % Return_Portfolio"].var()
                             spy_variance = merged_df["*100 % Return_SPY"].var()
                             correlation = np.corrcoef(merged_df["*100 % Return_Portfolio"], merged_df["*100 % Return_SPY"])[0, 1]
                         else:
-                            alpha, beta, r_squared, fama_alpha, fama_pval, t_stat, t_pval, wilcoxon_stat, wilcoxon_pval, boot_mean, boot_ci_lower, boot_ci_upper, boot_pval, z_stat_psr, z_pval_psr, boot_mean_psr, boot_ci_lower_psr, boot_ci_upper_psr, boot_pval_psr, portfolio_mean, spy_mean, portfolio_variance, spy_variance, correlation = (None,) * 24
+                            alpha, beta, r_squared, fama_alpha, fama_pval, t_stat, t_pval, wilcoxon_stat, wilcoxon_pval, \
+                            boot_mean_alpha, boot_ci_lower_alpha, boot_ci_upper_alpha, boot_pval_alpha, \
+                            z_stat_psr, z_pval_psr, boot_mean_psr, boot_ci_lower_psr, boot_ci_upper_psr, boot_pval_psr, \
+                            portfolio_mean, spy_mean, portfolio_variance, spy_variance, correlation = (None,) * 24
 
                         lw_test = LedoitWolf().fit(np.array(returns).reshape(-1, 1)).shrinkage_
                         lw_pval = norm.sf(lw_test)
@@ -937,8 +962,11 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             "CAGR": "> 0.1",  # Compound Annual Growth Rate, annualized return
                             "Volatility": "< 0.15",  # Annualized standard deviation of returns
                             "Sharpe Ratio": "> 1.0",  # Risk-adjusted return relative to volatility
+                            "SPY Sharpe Ratio: "Reference value" # Benchmark Sharpe Ratio for comparison
                             "Probabilistic Sharpe Ratio": "> 0.95",  # Probability that Sharpe Ratio is positive
+                            "Benchmark-Adjusted Probabilistic Sharpe Ratio": "> 0.95",  # Probability that Sharpe Ratio is greater than SPY's Sharpe
                             "Bayesian Sharpe Ratio": "> 1.0",  # Adjusted Sharpe Ratio using Bayesian methods
+                            "Information Ratio": "> 0.5" Identifies how much the portfolio has outperformed a benchmark
                             "Hurst Exponent": "> 0.5 and < 0.8",  # Measures persistence of time series trends
                             "Sortino Ratio": "> 1.0",  # Adjusted Sharpe Ratio focusing on downside risk
                             "Calmar Ratio": "> 0.5",  # Risk-adjusted return based on max drawdown
@@ -963,11 +991,15 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             "P-value of Bootstrap on Alpha": "< 0.05",  # Statistical significance of Bootstrapped Alpha
                             "Ledoit-Wolf Test on Sharpe Ratios": "Close to 0",  # Measures Sharpe Ratio robustness
                             "P-value of Ledoit-Wolf Test on Sharpe Ratios": "< 0.05",  # Confidence in Ledoit-Wolf test
+                            "Paired T-test on Sharpe Ratios": "> 2.0" # Tests if the portfolio’s mean return is significantly different from SPY's returns
+                            "P-value of Paired T-test on Sharpe Ratios": "< 0.05" # Statistical significance of portfolio Sharpe ratio from SPY
                             "Z-test on Probabilistic Sharpe Ratio (PSR)": "> 1.96",  # Z-score significance of PSR
                             "P-value of Z-test on Probabilistic Sharpe Ratio (PSR)": "< 0.05",  # Significance of Z-test for PSR
                             "Bootstrap on PSR": "> 1.0",  # Bootstrapped PSR should be above 1 for robustness
                             "Bootstrap CI on PSR": "Should not include 0",  # Confidence Interval should not include zero
                             "P-value of Bootstrap on PSR": "< 0.05",  # Statistical significance of Bootstrapped PSR
+                            "Z-test on Benchmark-Adjusted Probabilistic Sharpe Ratio (BPSR)": "> 1.96",  # Z-score significance of BPSR
+                            "P-value of Z-test on Benchmark-Adjusted Probabilistic Sharpe Ratio (BPSR)": "< 0.05",  # Significance of Z-test for BPSR
                             "Correlation": "> -0.3 and < 0.3",  # Portfolio correlation with benchmark (low absolute values preferred)
                             "Portfolio Mean": "> SPY Mean",  # Portfolio’s average daily return should exceed SPY
                             "SPY Mean": "Reference value",  # SPY benchmark average daily return
@@ -983,8 +1015,11 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                 "CAGR": cagr if cagr is not None else None,  # Return numeric value or None
                                 "Volatility": volatility if volatility is not None else None,
                                 "Sharpe Ratio": sharpe_ratio if sharpe_ratio is not None else None,
+                                "SPY Sharpe Ratio: spy_sharpe_ratio if spy_sharpe_ratio is not None else None,
                                 "Probabilistic Sharpe Ratio": psr if psr is not None else None,
+                                "Benchmark-Adjusted Probabilistic Sharpe Ratio": bpsr if bpsr is not None else None,
                                 "Bayesian Sharpe Ratio": bsr if bsr is not None else None,
+                                "Information Ratio": info_ratio if info_ratio is not None else None,
                                 "Hurst Exponent": hurst if hurst is not None else None,
                                 "Sortino Ratio": sortino_ratio if sortino_ratio is not None else None,
                                 "Calmar Ratio": (cagr / abs(max_drawdown)) if max_drawdown < 0 else None,
@@ -1004,16 +1039,20 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                 "P-value of Wilcoxon Signed-Rank on Alpha": wilcoxon_pval if wilcoxon_pval is not None else None,                        
                                 "Fama-French Alpha": fama_alpha if fama_alpha is not None else None,
                                 "P-value of Fama-French Alpha": fama_pval if fama_pval is not None else None,
-                                "Bootstrap on Alpha": boot_mean if boot_mean is not None else None,
-                                "Bootstrap CI on Alpha": (boot_ci_lower, boot_ci_upper) if (boot_ci_lower, boot_ci_upper) is not None else None,
-                                "P-value of Bootstrap on Alpha": boot_pval if boot_pval is not None else None,
+                                "Bootstrap on Alpha": boot_mean_alpha if boot_mean_alpha is not None else None,
+                                "Bootstrap CI on Alpha": (boot_ci_lower_alpha, boot_ci_upper_alpha) if (boot_ci_lower_alpha, boot_ci_upper_alpha) is not None else None,
+                                "P-value of Bootstrap on Alpha": boot_pval_alpha if boot_pval_alpha is not None else None,
                                 "Ledoit-Wolf Test on Sharpe Ratios": lw_test if lw_test is not None else None,
                                 "P-value of Ledoit-Wolf Test on Sharpe Ratios": lw_pval if lw_pval is not None else None,
+                                "Paired T-test on Sharpe Ratios": paired_t_stat if t_stat is not None else None,
+                                "P-value of Paired T-test on Sharpe Ratios": paired_t_pval if paired_t_pval is not None else None,
                                 "Z-test on Probabilistic Sharpe Ratio (PSR)": z_stat_psr if z_stat_psr is not None else None,
                                 "P-value of Z-test on Probabilistic Sharpe Ratio (PSR)": z_pval_psr if z_pval_psr is not None else None,
                                 "Bootstrap on PSR": boot_mean_psr if boot_mean_psr is not None else None,
                                 "Bootstrap CI on PSR": (boot_ci_lower_psr, boot_ci_upper_psr) if (boot_ci_lower_psr, boot_ci_upper_psr) is not None else None,
                                 "P-value of Bootstrap on PSR": boot_pval_psr if boot_pval_psr is not None else None,
+                                "Z-test on Benchmark-Adjusted Probabilistic Sharpe Ratio (BPSR)": z_stat_bpsr if z_stat_bpsr is not None else None,
+                                "P-value of Benchmark-Adjusted Z-test on Probabilistic Sharpe Ratio (BPSR)": z_pval_bpsr if z_pval_psr is not None else None,
                                 "Portfolio Mean": portfolio_mean if portfolio_mean is not None else None,
                                 "SPY Mean": spy_mean if spy_mean is not None else None,
                                 "Portfolio Variance": portfolio_variance if portfolio_variance is not None else None,
