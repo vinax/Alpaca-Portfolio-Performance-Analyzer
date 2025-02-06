@@ -904,7 +904,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             spy_variance = merged_df["*100 % Return_SPY"].var()
                             correlation = np.corrcoef(merged_df["*100 % Return_Portfolio"], merged_df["*100 % Return_SPY"])[0, 1]
                         else:
-                            alpha, beta, r_squared, fama_alpha, fama_pval, t_stat, t_pval, wilcoxon_stat, wilcoxon_pval, boot_pval, z_stat_psr, z_pval_psr, portfolio_mean, spy_mean, portfolio_variance, spy_variance, correlation = (None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None)
+                            alpha, beta, r_squared, fama_alpha, fama_pval, t_stat, t_pval, wilcoxon_stat, wilcoxon_pval, boot_mean, boot_ci_lower, boot_ci_upper, boot_pval, z_stat_psr, z_pval_psr, boot_mean_psr, boot_ci_lower_psr, boot_ci_upper_psr, boot_pval_psr, portfolio_mean, spy_mean, portfolio_variance, spy_variance, correlation = (None,) * 24
 
                         lw_test = LedoitWolf().fit(np.array(returns).reshape(-1, 1)).shrinkage_
                         lw_pval = norm.sf(lw_test)
