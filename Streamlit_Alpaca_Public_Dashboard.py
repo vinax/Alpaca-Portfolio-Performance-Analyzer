@@ -7,7 +7,7 @@
 ##########################################
 
 # Install necessary libraries
-# pip install alpaca-trade-api pandas matplotlib streamlit numpy yfinance scipy scikit-learn xlsxwriter
+# pip install alpaca-trade-api pandas matplotlib streamlit numpy yfinance scipy arch scikit-learn statsmodels xlsxwriter
 
 # Imports
 import os
@@ -22,9 +22,14 @@ from datetime import datetime, timedelta
 import numpy as np
 import yfinance as yf
 import scipy
-from scipy.stats import ttest_ind, skew, kurtosis, linregress, t
+from scipy.stats import ttest_ind, ttest_1samp, skew, kurtosis, linregress, t, wilcoxon, norm, bootstrap
+import arch
+from arch.unitroot import VarianceRatio
 import sklearn
 from sklearn.linear_model import LinearRegression
+from sklearn.covariance import LedoitWolf
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
 import io
 from io import BytesIO
 import json
@@ -837,100 +842,121 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
 
                 def calculate_metrics(filtered_df, spy_df=None):
                     try:
-                        returns = filtered_df['*100 % Return'].dropna() # Daily returns
-                        cumulative_values = filtered_df['Cumulative Value Return']  # Use cumulative value return
-                        years = len(filtered_df) / 252 # Assuming 252 trading days/year
-                        trades = len(returns) # Total trades
+                        returns = filtered_df['*100 % Return'].dropna()
+                        cumulative_values = filtered_df['Cumulative Value Return']
+                        years = len(filtered_df) / 252
+                        trades = len(returns)
 
-                        rolling_max = cumulative_values.cummax() # Calculate drawdown metrics
+                        rolling_max = cumulative_values.cummax()
                         drawdown = (cumulative_values - rolling_max) / rolling_max
                         max_drawdown = drawdown.min()
-                        end_date = drawdown.idxmin()
-                        start_date = cumulative_values.loc[:end_date].idxmax()
-                        recovery_time = (drawdown.loc[end_date:] == 0).idxmax() - end_date
+                        recovery_time = (drawdown.loc[drawdown.idxmin():] == 0).idxmax() - drawdown.idxmin()
 
-                        cagr = ((1 + returns).prod() ** (1 / years)) - 1 # CAGR
-                        volatility = returns.std() * np.sqrt(252) # Volatility
-                        sharpe_ratio = returns.mean() / returns.std() * np.sqrt(252) # Sharpe Ratio
+                        cagr = ((1 + returns).prod() ** (1 / years)) - 1
+                        volatility = returns.std() * np.sqrt(252)
+                        sharpe_ratio = returns.mean() / returns.std() * np.sqrt(252)
+                        psr = 1 - norm.cdf(1 / (1 + sharpe_ratio))
+                        bsr = (sharpe_ratio * 1**2 + 0) / (1 + 1**2)
                         downside_deviation = np.sqrt(np.mean(np.minimum(returns, 0) ** 2))
-                        sortino_ratio = (returns.mean() * 252) / downside_deviation # Sortino Ratio
-                        win_rate = (returns > 0).mean() # Win Rate
-                        profit_factor = returns[returns > 0].sum() / abs(returns[returns < 0].sum()) # Profit Factor
+                        sortino_ratio = (returns.mean() * 252) / downside_deviation
+                        hurst = np.polyfit(np.log(range(2, 100)), np.log([np.std(np.subtract(returns[lag:], returns[:-lag])) for lag in range(2, 100)]), 1)[0]
+                        win_rate = (returns > 0).mean()
+                        profit_factor = returns[returns > 0].sum() / abs(returns[returns < 0].sum())
 
-                        winning_trades = returns[returns > 0]
-                        losing_trades = returns[returns < 0]
-                        p_win = len(winning_trades) / len(returns) if len(returns) > 0 else 0
+                        p_win = (returns > 0).mean()
                         p_loss = 1 - p_win
-                        avg_win = winning_trades.mean() if len(winning_trades) > 0 else 0
-                        avg_loss = abs(losing_trades.mean()) if len(losing_trades) > 0 else 0
-                        expectancy = (p_win * avg_win) - (p_loss * avg_loss) # Expectancy
+                        avg_win = returns[returns > 0].mean() if (returns > 0).any() else 0
+                        avg_loss = abs(returns[returns < 0].mean()) if (returns < 0).any() else 0
+                        expectancy = (p_win * avg_win) - (p_loss * avg_loss)
 
-                        # Alpha, Beta, R-squared, T-statistic, and P-value (if SPY data is available)
-                        alpha, beta, r_squared, t_stat, p_value = (None, None, None, None, None)
                         if spy_df is not None and not spy_df.empty:
-                            # Align portfolio and SPY returns by date
-                            merged_df = pd.merge(
-                                filtered_df[["Date", "*100 % Return"]],
-                                spy_df[["Date", "*100 % Return"]],
-                                on="Date",
-                                suffixes=("_Portfolio", "_SPY"),
-                            )
-
-                            # Drop NaN values in merged returns
-                            merged_df = merged_df.dropna(subset=["*100 % Return_Portfolio", "*100 % Return_SPY"])
+                            merged_df = pd.merge(filtered_df[["Date", "*100 % Return"]], spy_df[["Date", "*100 % Return"]], on="Date", suffixes=("_Portfolio", "_SPY"))
+                            merged_df = merged_df.dropna()
                             st.subheader("Portfolio vs. SPY Returns:")
                             st.write(merged_df)
+                            beta, alpha, r_value, p_value, std_err = linregress(merged_df["*100 % Return_SPY"], merged_df["*100 % Return_Portfolio"])
+                            r_squared = r_value ** 2
+                            fama_alpha, fama_pval = smf.ols("Q(' *100 % Return_Portfolio') ~ Q(' *100 % Return_SPY')", data=merged_df).fit().params["Intercept"], smf.ols("Q(' *100 % Return_Portfolio') ~ Q(' *100 % Return_SPY')", data=merged_df).fit().pvalues["Intercept"]
+                            t_stat, t_pval = ttest_1samp(merged_df["*100 % Return_Portfolio"], 0)
+                            if len(merged_df) >= 10:
+                                wilcoxon_stat, wilcoxon_pval = wilcoxon(merged_df["*100 % Return_Portfolio"] - merged_df["*100 % Return_SPY"])
+                            else:
+                                wilcoxon_stat, wilcoxon_pval = None, None
+                            bootstrap_results = bootstrap((merged_df["*100 % Return_Portfolio"],), np.mean, confidence_level=0.95, n_resamples=1000)
+                            boot_mean = np.mean(bootstrap_results.bootstrap_distribution)
+                            boot_ci_lower = bootstrap_results.confidence_interval.low
+                            boot_ci_upper = bootstrap_results.confidence_interval.high
+                            boot_pval = 2 * min(
+                                np.mean(bootstrap_results.bootstrap_distribution >= 0), 
+                                np.mean(bootstrap_results.bootstrap_distribution <= 0)
+                            )
+                            z_stat_psr = sharpe_ratio / (returns.std() / np.sqrt(len(returns)))
+                            z_pval_psr = 2 * (1 - norm.cdf(abs(z_stat_psr)))
+                            bootstrap_results_psr = bootstrap((returns,), lambda r: (r.mean() / r.std()) * np.sqrt(252), confidence_level=0.95, n_resamples=1000)
+                            boot_mean_psr = np.mean(bootstrap_results_psr.bootstrap_distribution)
+                            boot_ci_lower_psr, boot_ci_upper_psr = bootstrap_results_psr.confidence_interval.low, bootstrap_results_psr.confidence_interval.high
+                            boot_pval_psr = 2 * min(
+                                np.mean(bootstrap_results_psr.bootstrap_distribution >= 0), 
+                                np.mean(bootstrap_results_psr.bootstrap_distribution <= 0)
+                            )
+                            portfolio_mean = merged_df["*100 % Return_Portfolio"].mean()
+                            spy_mean = merged_df["*100 % Return_SPY"].mean()
+                            portfolio_variance = merged_df["*100 % Return_Portfolio"].var()
+                            spy_variance = merged_df["*100 % Return_SPY"].var()
+                            correlation = np.corrcoef(merged_df["*100 % Return_Portfolio"], merged_df["*100 % Return_SPY"])[0, 1]
+                        else:
+                            alpha, beta, r_squared, fama_alpha, fama_pval, t_stat, t_pval, wilcoxon_stat, wilcoxon_pval, boot_pval, z_stat_psr, z_pval_psr, portfolio_mean, spy_mean, portfolio_variance, spy_variance, correlation = (None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None)
 
-                            # Extract valid returns
-                            portfolio_returns = merged_df["*100 % Return_Portfolio"].values
-                            spy_returns = merged_df["*100 % Return_SPY"].values
-
-                            # Ensure there are enough data points for regression
-                            if len(portfolio_returns) > 1 and len(spy_returns) > 1:
-                                # Regression for Alpha, Beta, and R-squared
-                                beta, alpha, r_value, p_value, std_err = linregress(spy_returns, portfolio_returns)
-                                r_squared = r_value ** 2
-                                t_stat = alpha / std_err
-
-                                # Means, Variances, and Correlation
-                                portfolio_mean = portfolio_returns.mean()
-                                spy_mean = spy_returns.mean()
-                                portfolio_variance = portfolio_returns.var()
-                                spy_variance = spy_returns.var()
-                                correlation = np.corrcoef(portfolio_returns, spy_returns)[0, 1]
-
-                        skewness_val = skew(returns) # Skewness and Kurtosis
+                        lw_test = LedoitWolf().fit(np.array(returns).reshape(-1, 1)).shrinkage_
+                        lw_pval = norm.sf(lw_test)
+                        skewness_val = skew(returns)
                         kurtosis_val = kurtosis(returns)
-                        trade_frequency = trades / years # Trade Frequency and SQN
                         sqn = (returns.mean() / returns.std()) * np.sqrt(trades)
 
                         # Define ideal metric thresholds
                         ideal_thresholds = {
-                            "CAGR": "> 0.1",  # Compound Annual Growth Rate
-                            "Volatility": "< 0.15",  # Annualized volatility
-                            "Sharpe Ratio": "> 1.0",  # Risk-adjusted return
-                            "Sortino Ratio": "> 1.0",  # Downside risk-adjusted return
-                            "Calmar Ratio": "> 0.5",  # Risk-adjusted return vs. drawdown
-                            "Ulcer Index": "< 5",  # Measure of drawdown severity
-                            "Max Drawdown": "> -0.2",  # Maximum portfolio loss
-                            "Average Drawdown": "> -0.1",  # Average portfolio loss
-                            "Recovery Time": "< 180",  # Time to recover from drawdown
+                            "CAGR": "> 0.1",  # Compound Annual Growth Rate, annualized return
+                            "Volatility": "< 0.15",  # Annualized standard deviation of returns
+                            "Sharpe Ratio": "> 1.0",  # Risk-adjusted return relative to volatility
+                            "Probabilistic Sharpe Ratio": "> 0.95",  # Probability that Sharpe Ratio is positive
+                            "Bayesian Sharpe Ratio": "> 1.0",  # Adjusted Sharpe Ratio using Bayesian methods
+                            "Hurst Exponent": "> 0.5 and < 0.8",  # Measures persistence of time series trends
+                            "Sortino Ratio": "> 1.0",  # Adjusted Sharpe Ratio focusing on downside risk
+                            "Calmar Ratio": "> 0.5",  # Risk-adjusted return based on max drawdown
+                            "Ulcer Index": "< 5",  # Measures drawdown severity and recovery time
+                            "Max Drawdown": "< -0.2",  # Largest peak-to-trough decline in portfolio value
+                            "Average Drawdown": "< -0.1",  # Average percentage decline from peak values
+                            "Recovery Time": "< 180",  # Number of days required to recover from max drawdown
                             "Win Rate": "> 0.5",  # Percentage of profitable trades
                             "Profit Factor": "> 1.5",  # Ratio of gross profits to gross losses
-                            "Expectancy": "> 0",  # Average return per trade
-                            "R-squared": "> 0.5",  # Variance explained by benchmark
-                            "Alpha": "> 0",  # Excess return over benchmark
-                            "Beta": "< 1",  # Sensitivity to benchmark
-                            "T-statistic of Returns": "> 2.0",  # Statistical significance of Alpha
-                            "P-value": "< 0.05",  # Confidence in Alpha's significance
-                            "Correlation": "> -0.3 and < 0.3",  # Portfolio vs. benchmark
-                            "Portfolio Mean": "> SPY Mean",  # Portfolio’s average daily return
-                            "SPY Mean": "Reference value",  # Benchmark average daily return
-                            "Portfolio Variance": "< 0.01",  # Low return variance is preferred
-                            "SPY Variance": "Reference value",  # Benchmark return variance
-                            "Skewness": "> 0",  # Positive skewness preferred
-                            "Kurtosis": "> 3",  # Higher kurtosis indicates heavy tails
-                            "SQN": "> 2.5",  # System Quality Number for strategy robustness
+                            "Expectancy": "> 0",  # Expected return per trade
+                            "Alpha": "> 0",  # Excess return over the benchmark (SPY)
+                            "Beta": "< 1",  # Sensitivity of the portfolio to market movements
+                            "R-squared": "> 0.5",  # Measure of variance explained by the benchmark
+                            "T-test on Alpha": "> 2.0",  # Statistical significance of Alpha
+                            "P-value of T-test on Alpha": "< 0.05",  # Confidence in Alpha's significance
+                            "Fama-French Alpha": "> 0",  # Alpha derived from Fama-French three-factor model
+                            "P-value of Fama-French Alpha": "< 0.05",  # Significance test of Fama-French Alpha
+                            "Wilcoxon Signed-Rank on Alpha": "> 0",  # Rank-based statistical test for Alpha
+                            "P-value of Wilcoxon Signed-Rank on Alpha": "< 0.05",  # Significance test for Wilcoxon Alpha
+                            "Bootstrap on Alpha": "> 0",  # Mean bootstrapped Alpha should be positive
+                            "Bootstrap CI on Alpha": "Should not include 0",  # Confidence Interval should not include zero
+                            "P-value of Bootstrap on Alpha": "< 0.05",  # Statistical significance of Bootstrapped Alpha
+                            "Ledoit-Wolf Test on Sharpe Ratios": "Close to 0",  # Measures Sharpe Ratio robustness
+                            "P-value of Ledoit-Wolf Test on Sharpe Ratios": "< 0.05",  # Confidence in Ledoit-Wolf test
+                            "Z-test on Probabilistic Sharpe Ratio (PSR)": "> 1.96",  # Z-score significance of PSR
+                            "P-value of Z-test on Probabilistic Sharpe Ratio (PSR)": "< 0.05",  # Significance of Z-test for PSR
+                            "Bootstrap on PSR": "> 1.0",  # Bootstrapped PSR should be above 1 for robustness
+                            "Bootstrap CI on PSR": "Should not include 0",  # Confidence Interval should not include zero
+                            "P-value of Bootstrap on PSR": "< 0.05",  # Statistical significance of Bootstrapped PSR
+                            "Correlation": "> -0.3 and < 0.3",  # Portfolio correlation with benchmark (low absolute values preferred)
+                            "Portfolio Mean": "> SPY Mean",  # Portfolio’s average daily return should exceed SPY
+                            "SPY Mean": "Reference value",  # SPY benchmark average daily return
+                            "Portfolio Variance": "< 0.01",  # Low return variance preferred for stability
+                            "SPY Variance": "Reference value",  # Variance of the benchmark (SPY)
+                            "Skewness": "> 0",  # Positive skewness indicates right-tailed distribution (desirable)
+                            "Kurtosis": "> 3",  # Higher kurtosis indicates heavy tails (extreme events)
+                            "SQN": "> 2.5",  # System Quality Number for assessing trading strategy robustness
                         }
 
                         return {
@@ -947,11 +973,25 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                 "Win Rate": win_rate if win_rate is not None else None,
                                 "Profit Factor": profit_factor if profit_factor is not None else None,
                                 "Expectancy": expectancy if expectancy is not None else None,
-                                "R-squared": r_squared if r_squared is not None else None,
                                 "Alpha": alpha if alpha is not None else None,
                                 "Beta": beta if beta is not None else None,
-                                "T-statistic of Returns": t_stat if t_stat is not None else None,
-                                "P-value": p_value if p_value is not None else None,
+                                "R-squared": r_squared if r_squared is not None else None,
+                                "T-test on Alpha": t_stat if t_stat is not None else None,
+                                "P-value of T-test on Alpha": t_pval if t_pval is not None else None,
+                                "Wilcoxon Signed-Rank on Alpha": wilcoxon_stat if wilcoxon_stat is not None else None,
+                                "P-value of Wilcoxon Signed-Rank on Alpha": wilcoxon_pval if wilcoxon_pval ,                        
+                                "Fama-French Alpha": fama_alpha if fama_alpha is not None else None,
+                                "P-value of Fama-French Alpha": fama_pval if fama_pval is not None else None,
+                                "Bootstrap on Alpha": boot_mean if boot_mean is not None else None,
+                                "Bootstrap CI on Alpha": (boot_ci_lower, boot_ci_upper) if (boot_ci_lower, boot_ci_upper) is not None else None,
+                                "P-value of Bootstrap on Alpha": boot_pval if boot_pval is not None else None,
+                                "Ledoit-Wolf Test on Sharpe Ratios": lw_test if lw_test is not None else None,
+                                "P-value of Ledoit-Wolf Test on Sharpe Ratios": lw_pval if lw_pval is not None else None,
+                                "Z-test on Probabilistic Sharpe Ratio (PSR)": z_stat_psr if z_stat_psr is not None else None,
+                                "P-value of Z-test on Probabilistic Sharpe Ratio (PSR)": z_pval_psr if z_pval_psr is not None else None,
+                                "Bootstrapped PSR": boot_mean_psr if boot_mean_psr is not None else None,
+                                "Bootstrap CI on PSR": (boot_ci_lower_psr, boot_ci_upper_psr) if (boot_ci_lower_psr, boot_ci_upper_psr) is not None else None,
+                                "Bootstrap P-value on PSR": boot_pval_psr if boot_pval_psr is not None else None,
                                 "Portfolio Mean": portfolio_mean if portfolio_mean is not None else None,
                                 "SPY Mean": spy_mean if spy_mean is not None else None,
                                 "Portfolio Variance": portfolio_variance if portfolio_variance is not None else None,
@@ -1050,6 +1090,8 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                     elif "Close to" in ideal:
                                         target = float(ideal.split("to")[1].replace("(", "").replace(")", "").strip())
                                         meets_threshold = abs(float(value) - target) < 0.1 * target
+                                    elif "Should not include 0" in ideal:
+                                        meets_threshold = not (value[0] <= 0 <= value[1])
                                 except (ValueError, TypeError):
                                     meets_threshold = None  # Skip non-numeric thresholds
 
