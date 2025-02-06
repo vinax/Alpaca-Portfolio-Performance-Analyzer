@@ -889,7 +889,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                 np.mean(bootstrap_results.bootstrap_distribution >= 0), 
                                 np.mean(bootstrap_results.bootstrap_distribution <= 0)
                             )
-                            z_stat_psr = sharpe_ratio / (returns.std() / np.sqrt(len(returns)))
+                            z_stat_psr = sharpe_ratio / ((returns.std() * np.sqrt(252)) / np.sqrt(len(returns)))
                             z_pval_psr = 2 * (1 - norm.cdf(abs(z_stat_psr)))
                             bootstrap_results_psr = bootstrap((returns,), lambda r: (r.mean() / r.std()) * np.sqrt(252), confidence_level=0.95, n_resamples=1000)
                             boot_mean_psr = np.mean(bootstrap_results_psr.bootstrap_distribution)
