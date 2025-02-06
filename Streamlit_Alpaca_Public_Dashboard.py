@@ -963,6 +963,9 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                 "CAGR": cagr if cagr is not None else None,  # Return numeric value or None
                                 "Volatility": volatility if volatility is not None else None,
                                 "Sharpe Ratio": sharpe_ratio if sharpe_ratio is not None else None,
+                                "Probabilistic Sharpe Ratio": psr if psr is not None else None,
+                                "Bayesian Sharpe Ratio": bsr if bsr is not None else None,
+                                "Hurst Exponent": hurst if hurst is not None else None,
                                 "Sortino Ratio": sortino_ratio if sortino_ratio is not None else None,
                                 "Calmar Ratio": (cagr / abs(max_drawdown)) if max_drawdown < 0 else None,
                                 "Ulcer Index": np.sqrt(np.mean(drawdown ** 2)) if drawdown is not None else None,
