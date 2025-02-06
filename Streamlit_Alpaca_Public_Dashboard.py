@@ -962,7 +962,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             "Probabilistic Sharpe Ratio": "> 0.95",  # Probability that Sharpe Ratio is positive
                             "Benchmark-Adjusted Probabilistic Sharpe Ratio": "> 0.95",  # Probability that Sharpe Ratio is greater than SPY's Sharpe
                             "Bayesian Sharpe Ratio": "> 1.0",  # Adjusted Sharpe Ratio using Bayesian methods
-                            "Information Ratio": "> 0.5", Identifies how much the portfolio has outperformed a benchmark
+                            "Information Ratio": "> 0.5", # Identifies how much the portfolio has outperformed a benchmark
                             "Hurst Exponent": "> 0.5 and < 0.8",  # Measures persistence of time series trends
                             "Sortino Ratio": "> 1.0",  # Adjusted Sharpe Ratio focusing on downside risk
                             "Calmar Ratio": "> 0.5",  # Risk-adjusted return based on max drawdown
