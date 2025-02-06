@@ -858,14 +858,27 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         psr = 1 - norm.cdf(1 / (1 + sharpe_ratio))
                         bsr = (sharpe_ratio * 1**2 + 0) / (1 + 1**2)
                         downside_deviation = np.sqrt(np.mean(np.minimum(returns, 0) ** 2))
-                        #hurst = np.polyfit(np.log(range(2, 100)), np.log([np.std(np.subtract(returns[lag:], returns[:-lag])) for lag in range(2, 100)]), 1)[0]
-                        lags = range(2, min(len(returns) // 2, 100))
-                        std_values = [np.std(np.subtract(returns[lag:], returns[:-lag])) for lag in lags]
-                        std_values = [val if val > 0 else 1e-10 for val in std_values]
-                        if len(std_values) == 0 or np.std(std_values) == 0:
-                            hurst = np.nan  # Not enough variation in data
+
+                        returns_array = np.array(returns.dropna())  # Drop NaNs to avoid errors
+                        N = len(returns_array)
+                        if N < 100:
+                            hurst = np.nan  # Not enough data points
                         else:
-                            hurst = np.polyfit(np.log(lags), np.log(std_values), 1)[0]
+                            chunk_sizes = [2 ** i for i in range(3, int(np.log2(N)))] # Define chunk sizes for R/S calculation
+                            RS = [] # Compute Rescaled Range (R/S) for each chunk size
+                            for chunk in chunk_sizes:
+                                num_chunks = N // chunk
+                                rescaled_ranges = []
+                                for i in range(num_chunks):
+                                    subset = returns_array[i * chunk:(i + 1) * chunk]
+                                    mean_adj_series = subset - np.mean(subset)
+                                    cumulative_deviation = np.cumsum(mean_adj_series)
+                                    R = np.max(cumulative_deviation) - np.min(cumulative_deviation)
+                                    S = np.std(subset, ddof=1)  # Sample standard deviation
+                                    rescaled_ranges.append(R / S if S > 0 else 0)
+                                RS.append(np.mean(rescaled_ranges))
+                            hurst = float(np.polyfit(np.log(chunk_sizes), np.log(RS), 1)[0]) # Fit the log-log relationship to estimate the Hurst exponent
+
                         sortino_ratio = (returns.mean() * 252) / (downside_deviation * np.sqrt(252))
                         win_rate = (returns > 0).mean()
                         profit_factor = returns[returns > 0].sum() / abs(returns[returns < 0].sum())
