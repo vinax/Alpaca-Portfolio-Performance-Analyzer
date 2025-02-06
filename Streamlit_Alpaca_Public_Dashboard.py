@@ -979,7 +979,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                 "T-test on Alpha": t_stat if t_stat is not None else None,
                                 "P-value of T-test on Alpha": t_pval if t_pval is not None else None,
                                 "Wilcoxon Signed-Rank on Alpha": wilcoxon_stat if wilcoxon_stat is not None else None,
-                                "P-value of Wilcoxon Signed-Rank on Alpha": wilcoxon_pval if wilcoxon_pval ,                        
+                                "P-value of Wilcoxon Signed-Rank on Alpha": wilcoxon_pval if wilcoxon_pval is not None else None,                        
                                 "Fama-French Alpha": fama_alpha if fama_alpha is not None else None,
                                 "P-value of Fama-French Alpha": fama_pval if fama_pval is not None else None,
                                 "Bootstrap on Alpha": boot_mean if boot_mean is not None else None,
