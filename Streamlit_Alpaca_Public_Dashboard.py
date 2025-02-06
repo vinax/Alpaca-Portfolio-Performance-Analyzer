@@ -858,7 +858,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                         psr = 1 - norm.cdf(1 / (1 + sharpe_ratio))
                         bsr = (sharpe_ratio * 1**2 + 0) / (1 + 1**2)
                         downside_deviation = np.sqrt(np.mean(np.minimum(returns, 0) ** 2))
-                        sortino_ratio = (returns.mean() * 252) / downside_deviation
+                        sortino_ratio = (returns.mean() * 252) / (downside_deviation * np.sqrt(252))
                         hurst = np.polyfit(np.log(range(2, 100)), np.log([np.std(np.subtract(returns[lag:], returns[:-lag])) for lag in range(2, 100)]), 1)[0]
                         win_rate = (returns > 0).mean()
                         profit_factor = returns[returns > 0].sum() / abs(returns[returns < 0].sum())
@@ -1087,8 +1087,14 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                     elif "<" in ideal:
                                         meets_threshold = float(value) < float(ideal.split("<")[1].replace("%", "").strip())
                                     elif "Close to" in ideal:
-                                        target = float(ideal.split("to")[1].replace("(", "").replace(")", "").strip())
-                                        meets_threshold = abs(float(value) - target) < 0.1 * target
+                                        target_str = ideal.split("to")[1].replace("(", "").replace(")", "").strip()
+                                        target = float(target_str)
+                                        if target == 0:
+                                            # Use an absolute tolerance when the target is zero (e.g., 1e-6)
+                                            meets_threshold = abs(float(value)) < 1e-6
+                                        else:
+                                            # Otherwise, use 10% of the target value as tolerance
+                                            meets_threshold = abs(float(value) - target) < 0.1 * abs(target)
                                     elif "Should not include 0" in ideal:
                                         meets_threshold = not (float(value[0]) <= 0 <= float(value[1]))
                                         value = f"({float(value[0]):.4f}, {float(value[1]):.4f})"
