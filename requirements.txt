@@ -5,5 +5,7 @@ streamlit
 numpy
 yfinance
 scipy
+arch
 scikit-learn
+statsmodels
 xlsxwriter
