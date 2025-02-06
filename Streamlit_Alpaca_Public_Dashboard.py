@@ -904,7 +904,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             t_stat, t_pval = ttest_1samp(merged_df["*100 % Return_Portfolio"], 0)
                             if len(merged_df) >= 10:
                                 wilcoxon_stat, wilcoxon_pval = wilcoxon(merged_df["*100 % Return_Portfolio"] - merged_df["*100 % Return_SPY"])
-                                paired_t_stat, paired_t_pval = stats.ttest_rel(merged_df["*100 % Return_Portfolio"], merged_df["*100 % Return_SPY"]
+                                paired_t_stat, paired_t_pval = stats.ttest_rel(merged_df["*100 % Return_Portfolio"], merged_df["*100 % Return_SPY"])
                             else:
                                 wilcoxon_stat, wilcoxon_pval, paired_t_stat, paired_t_pval = (None,) * 4
                             benchmark_sharpe = spy_sharpe_ratio # Use SPY's Sharpe Ratio as the benchmark
