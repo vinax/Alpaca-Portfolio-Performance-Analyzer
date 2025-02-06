@@ -958,7 +958,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             "CAGR": "> 0.1",  # Compound Annual Growth Rate, annualized return
                             "Volatility": "< 0.15",  # Annualized standard deviation of returns
                             "Sharpe Ratio": "> 1.0",  # Risk-adjusted return relative to volatility
-                            "SPY Sharpe Ratio: "Reference value", # Benchmark Sharpe Ratio for comparison
+                            "SPY Sharpe Ratio": "Reference value", # Benchmark Sharpe Ratio for comparison
                             "Probabilistic Sharpe Ratio": "> 0.95",  # Probability that Sharpe Ratio is positive
                             "Benchmark-Adjusted Probabilistic Sharpe Ratio": "> 0.95",  # Probability that Sharpe Ratio is greater than SPY's Sharpe
                             "Bayesian Sharpe Ratio": "> 1.0",  # Adjusted Sharpe Ratio using Bayesian methods
@@ -1011,7 +1011,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                                 "CAGR": cagr if cagr is not None else None,  # Return numeric value or None
                                 "Volatility": volatility if volatility is not None else None,
                                 "Sharpe Ratio": sharpe_ratio if sharpe_ratio is not None else None,
-                                "SPY Sharpe Ratio: spy_sharpe_ratio if spy_sharpe_ratio is not None else None,
+                                "SPY Sharpe Ratio": spy_sharpe_ratio if spy_sharpe_ratio is not None else None,
                                 "Probabilistic Sharpe Ratio": psr if psr is not None else None,
                                 "Benchmark-Adjusted Probabilistic Sharpe Ratio": bpsr if bpsr is not None else None,
                                 "Bayesian Sharpe Ratio": bsr if bsr is not None else None,
