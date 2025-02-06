@@ -876,7 +876,7 @@ if is_api_key_valid() and is_api_connection_valid(api) and starting_date < endin
                             st.write(merged_df)
                             beta, alpha, r_value, p_value, std_err = linregress(merged_df["*100 % Return_SPY"], merged_df["*100 % Return_Portfolio"])
                             r_squared = r_value ** 2
-                            fama_alpha, fama_pval = smf.ols("Q(' *100 % Return_Portfolio') ~ Q(' *100 % Return_SPY')", data=merged_df).fit().params["Intercept"], smf.ols("Q(' *100 % Return_Portfolio') ~ Q(' *100 % Return_SPY')", data=merged_df).fit().pvalues["Intercept"]
+                            fama_alpha, fama_pval = smf.ols("Q('*100 % Return_Portfolio') ~ Q('*100 % Return_SPY')", data=merged_df).fit().params["Intercept"], smf.ols("Q('*100 % Return_Portfolio') ~ Q('*100 % Return_SPY')", data=merged_df).fit().pvalues["Intercept"]
                             t_stat, t_pval = ttest_1samp(merged_df["*100 % Return_Portfolio"], 0)
                             if len(merged_df) >= 10:
                                 wilcoxon_stat, wilcoxon_pval = wilcoxon(merged_df["*100 % Return_Portfolio"] - merged_df["*100 % Return_SPY"])
